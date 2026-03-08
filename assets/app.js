@@ -235,8 +235,9 @@
       return;
     }
 
-    if (!state.security.requireHumanCheck) {
+    if (!state.security.requireHumanCheck || !state.security.recaptcha.enabled) {
       hideVerifyModal();
+      setVerifyFeedback("人机验证已关闭，已直接放行。", "ok");
       unlockNavigation();
       return;
     }
@@ -244,19 +245,21 @@
     lockNavigation("请先完成人机验证，验证前不会显示导航。", true);
     showVerifyModal();
 
-    if (!state.security.recaptcha.enabled) {
-      setVerifyFeedback("reCAPTCHA 未启用，导航保持锁定。", "error");
-      return;
-    }
-
     if (!state.security.recaptcha.siteKey || state.security.recaptcha.siteKey === "YOUR_RECAPTCHA_SITE_KEY") {
       setVerifyFeedback("请在 cfg/app.json 配置有效的 reCAPTCHA Site Key。", "error");
       return;
     }
 
     setVerifyFeedback("正在加载 reCAPTCHA 组件...", "warn");
-    await ensureRecaptchaApiLoaded();
-    renderRecaptchaWidget();
+
+    try {
+      await ensureRecaptchaApiLoaded();
+      renderRecaptchaWidget();
+    } catch (error) {
+      setVerifyFeedback(error.message || "reCAPTCHA 加载失败，请稍后重试。", "error");
+      lockNavigation("验证服务不可用，导航继续保持隐藏。", true);
+      showVerifyModal();
+    }
   }
 
   function ensureRecaptchaApiLoaded() {
@@ -1042,3 +1045,4 @@
       .join("");
   }
 })();
+
