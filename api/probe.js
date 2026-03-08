@@ -1,4 +1,7 @@
-﻿function setCors(res) {
+﻿const CACHE_TTL_MS = 60 * 1000;
+const probeCache = new Map();
+
+function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -77,6 +80,36 @@ function classify(resp, latencyMs) {
   return { status: "blocked", message: `HTTP ${status}（访问受限）` };
 }
 
+function readCache(url) {
+  const entry = probeCache.get(url);
+  if (!entry) return null;
+
+  if (Date.now() > entry.expireAt) {
+    probeCache.delete(url);
+    return null;
+  }
+
+  return {
+    ...entry.result,
+    message: `${entry.result.message}（缓存）`,
+  };
+}
+
+function writeCache(url, result) {
+  probeCache.set(url, {
+    result,
+    expireAt: Date.now() + CACHE_TTL_MS,
+  });
+
+  if (probeCache.size > 500) {
+    for (const [k, v] of probeCache.entries()) {
+      if (Date.now() > v.expireAt) {
+        probeCache.delete(k);
+      }
+    }
+  }
+}
+
 module.exports = async function handler(req, res) {
   setCors(res);
 
@@ -93,6 +126,12 @@ module.exports = async function handler(req, res) {
   const rawUrl = String(req.query.url || "").trim();
   if (!rawUrl || !isHttpUrl(rawUrl)) {
     res.status(400).json({ status: "unknown", message: "url 参数无效" });
+    return;
+  }
+
+  const cached = readCache(rawUrl);
+  if (cached) {
+    res.status(200).json(cached);
     return;
   }
 
@@ -122,14 +161,20 @@ module.exports = async function handler(req, res) {
 
     const latencyMs = Date.now() - start;
     const result = classify(resp, latencyMs);
+    writeCache(rawUrl, result);
     res.status(200).json(result);
   } catch (err) {
     const aborted = err && err.name === "AbortError";
     if (aborted) {
-      res.status(200).json({ status: "timeout", message: "连接超时（代理探测）" });
+      const timeoutResult = { status: "timeout", message: "连接超时（代理探测）" };
+      writeCache(rawUrl, timeoutResult);
+      res.status(200).json(timeoutResult);
       return;
     }
-    res.status(200).json({ status: "error", message: "连接异常（代理探测）" });
+
+    const errorResult = { status: "error", message: "连接异常（代理探测）" };
+    writeCache(rawUrl, errorResult);
+    res.status(200).json(errorResult);
   } finally {
     clearTimeout(timer);
   }

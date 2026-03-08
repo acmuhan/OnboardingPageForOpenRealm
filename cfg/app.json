@@ -1,33 +1,34 @@
 ﻿{
-  "siteTitle": "OpenCloud",
-  "siteSubtitle": "From OpenRealm",
-  "noticeSource": "data/notices.json",
-  "linkSource": "data/links.json",
-  "pollingSeconds": 60,
-  "customLabels": {
-    "noticeTitle": "公告",
-    "navTitle": "导航"
-  },
-  "antiCrawler": {
-    "requireHumanCheck": true,
-    "useObfuscatedLinks": true,
-    "probeRateLimitMs": 1200,
-    "antiDebug": {
-      "enabled": true,
-      "lockOnDetect": true,
-      "detectIntervalMs": 1200,
-      "devtoolsThreshold": 160,
-      "blockContextMenu": true,
-      "blockKeyShortcuts": true
-    },
-    "recaptcha": {
-      "enabled": false,
-      "siteKey": "b",
-      "apiUrl": "https://www.recaptcha.net/recaptcha/api.js",
-      "hl": "zh-CN",
-      "theme": "light",
-      "size": "normal",
-      "tokenTTLSeconds": 110
-    }
-  }
+    "siteTitle":  "OpenCloud",
+    "siteSubtitle":  "From OpenRealm",
+    "noticeSource":  "data/notices.json",
+    "linkSource":  "data/links.json",
+    "pollingSeconds":  60,
+    "customLabels":  {
+                         "noticeTitle":  "公告",
+                         "navTitle":  "导航"
+                     },
+    "antiCrawler":  {
+                        "requireHumanCheck":  true,
+                        "useObfuscatedLinks":  true,
+                        "probeRateLimitMs":  1200,
+                        "antiDebug":  {
+                                          "enabled":  true,
+                                          "lockOnDetect":  true,
+                                          "detectIntervalMs":  1200,
+                                          "devtoolsThreshold":  160,
+                                          "blockContextMenu":  true,
+                                          "blockKeyShortcuts":  true,
+                                          "enforcementMode":  "warn"
+                                      },
+                        "recaptcha":  {
+                                          "enabled":  false,
+                                          "siteKey":  "b",
+                                          "apiUrl":  "https://www.recaptcha.net/recaptcha/api.js",
+                                          "hl":  "zh-CN",
+                                          "theme":  "light",
+                                          "size":  "normal",
+                                          "tokenTTLSeconds":  110
+                                      }
+                    }
 }

@@ -1,0 +1,22 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "notices.schema.json",
+  "type": "object",
+  "required": ["notices"],
+  "properties": {
+    "notices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "markdown"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "markdown": { "type": "string", "minLength": 1 },
+          "date": { "type": "string" },
+          "pinned": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

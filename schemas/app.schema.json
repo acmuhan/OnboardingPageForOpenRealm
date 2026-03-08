@@ -1,0 +1,35 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "app.schema.json",
+  "type": "object",
+  "required": ["siteTitle", "siteSubtitle", "noticeSource", "linkSource", "pollingSeconds", "customLabels", "antiCrawler"],
+  "properties": {
+    "siteTitle": { "type": "string", "minLength": 1 },
+    "siteSubtitle": { "type": "string", "minLength": 1 },
+    "noticeSource": { "type": "string", "minLength": 1 },
+    "linkSource": { "type": "string", "minLength": 1 },
+    "pollingSeconds": { "type": "number", "minimum": 10 },
+    "customLabels": {
+      "type": "object",
+      "required": ["noticeTitle", "navTitle"],
+      "properties": {
+        "noticeTitle": { "type": "string", "minLength": 1 },
+        "navTitle": { "type": "string", "minLength": 1 }
+      }
+    },
+    "antiCrawler": {
+      "type": "object",
+      "properties": {
+        "probeRateLimitMs": { "type": "number", "minimum": 300, "maximum": 5000 },
+        "antiDebug": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "lockOnDetect": { "type": "boolean" },
+            "enforcementMode": { "type": "string", "enum": ["lock", "warn"] }
+          }
+        }
+      }
+    }
+  }
+}

@@ -17,6 +17,7 @@
       devtoolsThreshold: 160,
       blockContextMenu: true,
       blockKeyShortcuts: true,
+      enforcementMode: "lock",
     },
     recaptcha: {
       enabled: true,
@@ -63,6 +64,7 @@
     debugGuard: {
       active: false,
       monitorId: null,
+      warned: false,
     },
   };
 
@@ -214,10 +216,18 @@
       return;
     }
 
+    if (state.security.antiDebug.enforcementMode === "warn") {
+      if (!state.debugGuard.warned) {
+        state.debugGuard.warned = true;
+        updatePollingLabel("检测到调试行为（宽松模式：仅提示，不锁站）");
+      }
+      return;
+    }
+
     state.debugGuard.active = true;
     state.verification.verified = false;
     state.verification.token = "";
-    lockNavigation("站点已锁定：检测到调试行为。请关闭开发者工具并刷新页面。", true);
+    lockNavigation("站点已锁定：检测到调试行为。请关闭调试工具并刷新页面。", true);
     hideVerifyModal();
     showDebugShield(reason);
   }
@@ -1026,6 +1036,7 @@
         devtoolsThreshold: normalizeNumber(sourceAntiDebug.devtoolsThreshold, DEFAULT_SECURITY.antiDebug.devtoolsThreshold, 80, 400),
         blockContextMenu: sourceAntiDebug.blockContextMenu !== false,
         blockKeyShortcuts: sourceAntiDebug.blockKeyShortcuts !== false,
+        enforcementMode: sourceAntiDebug.enforcementMode === "warn" ? "warn" : "lock",
       },
       recaptcha: {
         enabled: sourceRecaptcha.enabled !== false,
