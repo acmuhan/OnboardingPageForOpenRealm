@@ -8,9 +8,10 @@
         {
           "id": "main-web",
           "name": "ProxyWeb",
-          "urlEncoded": "https://openrealmnet001.online",
+          "urlEncoded": "aHR0cHM6Ly9vcGVucmVhbG1uZXQwMDEub25saW5l",
           "desc": "入口1(CloudFlare)",
-          "tag": "Proxy"
+          "tag": "Proxy",
+          "url": "https://openrealmnet001.online"
         }
       ]
     }

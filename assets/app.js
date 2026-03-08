@@ -485,8 +485,17 @@
       return item.url.trim();
     }
 
-    if (state.security.useObfuscatedLinks && typeof item.urlEncoded === "string" && item.urlEncoded.trim()) {
-      return decodeObfuscatedUrl(item.urlEncoded.trim());
+    if (typeof item.urlEncoded === "string" && item.urlEncoded.trim()) {
+      const raw = item.urlEncoded.trim();
+
+      // Compatibility: allow plain URL accidentally put into urlEncoded.
+      if (/^(https?:|mailto:|tel:|magnet:)/i.test(raw)) {
+        return raw;
+      }
+
+      if (state.security.useObfuscatedLinks) {
+        return decodeObfuscatedUrl(raw);
+      }
     }
 
     return null;
@@ -1048,5 +1057,6 @@
       .join("");
   }
 })();
+
 
 
