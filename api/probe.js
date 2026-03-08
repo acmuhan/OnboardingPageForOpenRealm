@@ -14,7 +14,54 @@ function isHttpUrl(raw) {
   }
 }
 
-function classify(status, latencyMs) {
+function detectCdn(resp) {
+  const server = (resp.headers.get("server") || "").toLowerCase();
+  const via = (resp.headers.get("via") || "").toLowerCase();
+
+  if (resp.headers.get("cf-ray") || server.includes("cloudflare") || resp.headers.get("cf-cache-status")) {
+    return "Cloudflare";
+  }
+
+  if (
+    resp.headers.get("x-amz-cf-id") ||
+    resp.headers.get("x-amz-cf-pop") ||
+    server.includes("cloudfront") ||
+    via.includes("cloudfront")
+  ) {
+    return "CloudFront";
+  }
+
+  if (resp.headers.get("x-served-by") || server.includes("fastly") || via.includes("fastly")) {
+    return "Fastly";
+  }
+
+  if (resp.headers.get("x-akamai-transformed") || server.includes("akamai") || via.includes("akamai")) {
+    return "Akamai";
+  }
+
+  return null;
+}
+
+function classify(resp, latencyMs) {
+  const status = resp.status;
+  const cdn = detectCdn(resp);
+
+  if (cdn && (status === 401 || status === 403 || status === 429)) {
+    return {
+      status: "cdn_pass",
+      badgeText: `通行·${cdn}`,
+      message: `${cdn} 返回 HTTP ${status}（CDN防护，判定通行） · ${latencyMs}ms`,
+    };
+  }
+
+  if (cdn && status >= 200 && status < 400) {
+    return {
+      status: "cdn_pass",
+      badgeText: `通行·${cdn}`,
+      message: `${cdn} HTTP ${status} · ${latencyMs}ms`,
+    };
+  }
+
   if (status >= 200 && status < 400) {
     return { status: "probable", message: `HTTP ${status} · ${latencyMs}ms` };
   }
@@ -74,7 +121,7 @@ module.exports = async function handler(req, res) {
     }
 
     const latencyMs = Date.now() - start;
-    const result = classify(resp.status, latencyMs);
+    const result = classify(resp, latencyMs);
     res.status(200).json(result);
   } catch (err) {
     const aborted = err && err.name === "AbortError";

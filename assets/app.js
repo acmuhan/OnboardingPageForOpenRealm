@@ -31,6 +31,7 @@
 
   const STATUS_META = {
     probable: { text: "可达", className: "status-probable" },
+    cdn_pass: { text: "通行", className: "status-probable" },
     challenge: { text: "疑似验证", className: "status-challenge" },
     blocked: { text: "策略拦截", className: "status-challenge" },
     timeout: { text: "超时", className: "status-timeout" },
@@ -744,7 +745,8 @@
   function applyProbeResult(entry, result) {
     const meta = STATUS_META[result.status] || STATUS_META.unknown;
     entry.badgeEl.className = "status-badge " + meta.className;
-    entry.badgeEl.textContent = meta.text;
+    entry.badgeEl.textContent =
+      typeof result.badgeText === "string" && result.badgeText ? result.badgeText : meta.text;
     entry.timeEl.textContent = result.message + " · " + formatDateTime(new Date());
   }
 
