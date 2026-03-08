@@ -237,6 +237,9 @@
 
     if (!state.security.requireHumanCheck || !state.security.recaptcha.enabled) {
       hideVerifyModal();
+      clearRecaptchaExpiry();
+      state.verification.verified = true;
+      state.verification.token = "BYPASS";
       setVerifyFeedback("人机验证已关闭，已直接放行。", "ok");
       unlockNavigation();
       return;
@@ -1045,4 +1048,5 @@
       .join("");
   }
 })();
+
 
