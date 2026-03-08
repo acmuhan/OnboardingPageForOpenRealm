@@ -1,0 +1,73 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow,noarchive,noimageindex" />
+    <title>入口发布页</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body class="site-masked">
+    <div class="page-shell">
+      <header class="hero">
+        <p class="hero-kicker">OpenCloud</p>
+        <h1 id="site-title">正在加载配置...</h1>
+        <p id="site-subtitle" class="hero-subtitle"></p>
+        <p id="last-updated" class="hero-meta">尚未执行链接检测</p>
+      </header>
+
+      <div id="error-panel" class="error-panel hidden" role="alert"></div>
+
+      <main class="content-grid">
+        <section class="panel">
+          <div class="panel-header">
+            <h2 id="notice-title">公告</h2>
+          </div>
+          <div id="notice-list" class="notice-list">
+            <p class="placeholder">正在加载公告...</p>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header panel-header-spread">
+            <h2 id="nav-title">导航</h2>
+            <button id="check-now-btn" type="button" class="outline-btn" disabled>立即检测</button>
+          </div>
+          <p id="polling-label" class="polling-label"></p>
+          <p id="locked-tip" class="locked-tip">请先完成人机验证，验证前不会显示导航内容。</p>
+
+          <div id="link-groups" class="link-groups">
+            <p class="placeholder">等待验证通过后加载导航链接...</p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="verify-modal" class="verify-modal hidden" role="dialog" aria-modal="true" aria-labelledby="verify-modal-title">
+      <div class="verify-card">
+        <h3 id="verify-modal-title" class="verify-title">请完成人机验证</h3>
+        <p class="verify-desc">验证通过前，网站内容将被完全遮罩。</p>
+        <div id="recaptcha-container" class="recaptcha-container"></div>
+        <p id="verify-feedback" class="verify-feedback"></p>
+        <div class="verify-actions">
+          <button id="refresh-captcha-btn" type="button" class="outline-btn">刷新验证</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="debug-shield" class="debug-shield hidden" role="alert">
+      <div class="debug-shield-card">
+        <h3>访问已锁定</h3>
+        <p id="debug-shield-text">检测到异常调试行为，站点已锁定，请关闭开发者工具后刷新页面。</p>
+      </div>
+    </div>
+
+    <noscript>
+      <div class="noscript-note">请启用 JavaScript 以加载配置与公告内容。</div>
+    </noscript>
+
+    <script src="assets/markdown.js"></script>
+    <script src="assets/app.js"></script>
+  </body>
+</html>
+
