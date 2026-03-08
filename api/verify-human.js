@@ -76,7 +76,11 @@ module.exports = async function handler(req, res) {
 
     const verifyData = await verifyResp.json();
     if (!verifyData || verifyData.success !== true) {
-      res.status(200).json({ ok: false, message: "Turnstile 校验未通过" });
+      const codes = Array.isArray(verifyData && verifyData["error-codes"])
+        ? verifyData["error-codes"]
+        : [];
+      const detail = codes.length ? `（${codes.join(",")}）` : "";
+      res.status(200).json({ ok: false, message: `Turnstile 校验未通过${detail}`, codes });
       return;
     }
 
@@ -85,7 +89,8 @@ module.exports = async function handler(req, res) {
       sessionToken: makeSessionToken(),
       expiresInSeconds: 600,
     });
-  } catch {
-    res.status(200).json({ ok: false, message: "Turnstile 校验服务异常" });
+  } catch (error) {
+    const msg = error && error.message ? `: ${error.message}` : "";
+    res.status(200).json({ ok: false, message: `Turnstile 校验服务异常${msg}` });
   }
 };

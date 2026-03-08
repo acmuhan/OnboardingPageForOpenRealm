@@ -356,11 +356,11 @@
     }
 
     if (!token) {
-      setVerifyFeedback("未获取到验证令牌，请重试。", "error");
+      setVerifyFeedback("No verification token received. Please try again.", "error");
       return;
     }
 
-    setVerifyFeedback("正在校验 Turnstile 结果...", "warn");
+    setVerifyFeedback("Verifying Turnstile result...", "warn");
 
     try {
       const sessionToken = await verifyTurnstileToken(token);
@@ -368,7 +368,7 @@
       state.verification.token = token;
       state.verification.sessionToken = sessionToken;
 
-      setVerifyFeedback("验证成功，正在解锁导航...", "ok");
+      setVerifyFeedback("Verification passed. Unlocking links...", "ok");
       hideVerifyModal();
       unlockNavigation();
       scheduleTurnstileExpiry();
@@ -376,33 +376,65 @@
       state.verification.verified = false;
       state.verification.token = "";
       state.verification.sessionToken = "";
-      setVerifyFeedback(error.message || "Turnstile 校验失败", "error");
+      if (window.turnstile && state.turnstile.widgetId !== null) {
+        window.turnstile.reset(state.turnstile.widgetId);
+      }
+      setVerifyFeedback((error.message || "Turnstile verification failed") + ". Captcha has been refreshed.", "error");
       showVerifyModal();
-      lockNavigation("验证失败，导航继续保持隐藏。", true);
+      lockNavigation("Verification failed. Links remain hidden.", true);
     }
   }
 
-  async function verifyTurnstileToken(token) {
-    const resp = await fetch("/api/verify-human", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ token }),
-      cache: "no-store",
-      credentials: "same-origin",
+  function sleep(ms) {
+    return new Promise(function (resolve) {
+      window.setTimeout(resolve, ms);
     });
+  }
 
-    if (!resp.ok) {
-      throw new Error("验证服务不可用");
+  async function verifyTurnstileToken(token) {
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        const resp = await fetch("/api/verify-human", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token }),
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+
+        let data = null;
+        try {
+          data = await resp.json();
+        } catch {
+          data = null;
+        }
+
+        if (!resp.ok) {
+          throw new Error((data && data.message) || "Verification service unavailable");
+        }
+
+        if (!data || data.ok !== true || !data.sessionToken) {
+          throw new Error((data && data.message) || "Turnstile server validation failed");
+        }
+
+        return data.sessionToken;
+      } catch (error) {
+        lastError = error;
+        const msg = String((error && error.message) || "").toLowerCase();
+        const mayRetry = attempt < 2 && (msg.indexOf("service") >= 0 || msg.indexOf("timeout") >= 0 || msg.indexOf("network") >= 0);
+        if (mayRetry) {
+          await sleep(600);
+          continue;
+        }
+        break;
+      }
     }
 
-    const data = await resp.json();
-    if (!data || data.ok !== true || !data.sessionToken) {
-      throw new Error((data && data.message) || "Turnstile 服务端校验失败");
-    }
-
-    return data.sessionToken;
+    throw lastError || new Error("Turnstile verification failed");
   }
 
   function handleTurnstileExpired() {
@@ -1196,6 +1228,7 @@
       .join("");
   }
 })();
+
 
 
 
