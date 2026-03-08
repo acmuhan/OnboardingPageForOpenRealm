@@ -754,71 +754,41 @@
       return { status: "unknown", message: "协议不支持检测" };
     }
 
-    const timeoutMs = 4500;
-
-    // HTTP-level ping approximation (ICMP ping is unavailable in browsers).
-    const fetchController = new AbortController();
-    const fetchStart = performance.now();
-    const fetchTimer = setTimeout(function () {
-      fetchController.abort();
-    }, timeoutMs);
-
-    let fetchOk = false;
-    let fetchTimeout = false;
-    let fetchCost = 0;
-    let fetchErrorText = "";
+    // Probe via same-origin API to avoid browser-side CORS/CORP differences.
+    const apiPath = "/api/probe?url=" + encodeURIComponent(parsed.href);
 
     try {
-      await fetch(parsed.href, {
+      const response = await fetch(apiPath, {
         method: "GET",
-        mode: "no-cors",
         cache: "no-store",
-        redirect: "follow",
-        signal: fetchController.signal,
+        credentials: "same-origin",
       });
-      fetchOk = true;
-      fetchCost = Math.round(performance.now() - fetchStart);
+
+      if (!response.ok) {
+        return {
+          status: "error",
+          message: "探测服务异常(" + response.status + ")",
+        };
+      }
+
+      const payload = await response.json();
+      if (!payload || typeof payload.status !== "string") {
+        return {
+          status: "error",
+          message: "探测结果无效",
+        };
+      }
+
+      return {
+        status: payload.status,
+        message: typeof payload.message === "string" && payload.message ? payload.message : "已完成检测",
+      };
     } catch (error) {
-      fetchTimeout = Boolean(error && error.name === "AbortError");
-      fetchErrorText = getErrorText(error);
-    } finally {
-      clearTimeout(fetchTimer);
-    }
-
-    if (fetchOk) {
       return {
-        status: "probable",
-        message: "HTTP Ping " + fetchCost + "ms",
+        status: "error",
+        message: "探测服务不可用",
       };
     }
-
-    const imageProbe = await probeImageReachability(parsed, timeoutMs);
-
-    if (fetchTimeout || imageProbe.timeout) {
-      return {
-        status: "timeout",
-        message: "连接超时（可能网络阻断）",
-      };
-    }
-
-    if (imageProbe.ok) {
-      return {
-        status: "challenge",
-        message: "疑似触发人机验证/反爬策略",
-      };
-    }
-
-    if (looksLikePolicyBlocked(fetchErrorText)) {
-      return {
-        status: "blocked",
-        message: "被站点安全策略拦截（CORS/CORP）",
-      };
-    }
-
-    return {
-      status: "error",
-      message: "连接异常（DNS/TLS/拦截）",
-    };
   }
 
   function getErrorText(error) {
