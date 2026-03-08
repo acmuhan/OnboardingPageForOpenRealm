@@ -32,6 +32,7 @@
   const STATUS_META = {
     probable: { text: "可达", className: "status-probable" },
     challenge: { text: "疑似验证", className: "status-challenge" },
+    blocked: { text: "策略拦截", className: "status-challenge" },
     timeout: { text: "超时", className: "status-timeout" },
     unknown: { text: "未知", className: "status-unknown" },
     error: { text: "异常", className: "status-error" },
@@ -765,6 +766,7 @@
     let fetchOk = false;
     let fetchTimeout = false;
     let fetchCost = 0;
+    let fetchErrorText = "";
 
     try {
       await fetch(parsed.href, {
@@ -778,6 +780,7 @@
       fetchCost = Math.round(performance.now() - fetchStart);
     } catch (error) {
       fetchTimeout = Boolean(error && error.name === "AbortError");
+      fetchErrorText = getErrorText(error);
     } finally {
       clearTimeout(fetchTimer);
     }
@@ -805,12 +808,47 @@
       };
     }
 
+    if (looksLikePolicyBlocked(fetchErrorText)) {
+      return {
+        status: "blocked",
+        message: "被站点安全策略拦截（CORS/CORP）",
+      };
+    }
+
     return {
       status: "error",
       message: "连接异常（DNS/TLS/拦截）",
     };
   }
 
+  function getErrorText(error) {
+    if (!error) {
+      return "";
+    }
+
+    const parts = [];
+    if (typeof error.name === "string") {
+      parts.push(error.name);
+    }
+    if (typeof error.message === "string") {
+      parts.push(error.message);
+    }
+    return parts.join(" ").toLowerCase();
+  }
+
+  function looksLikePolicyBlocked(errorText) {
+    if (!errorText) {
+      return false;
+    }
+
+    return (
+      errorText.indexOf("blocked_by_response") >= 0 ||
+      errorText.indexOf("notsameorigin") >= 0 ||
+      errorText.indexOf("corp") >= 0 ||
+      errorText.indexOf("cors") >= 0 ||
+      errorText.indexOf("typeerror") >= 0
+    );
+  }
   function probeImageReachability(parsedUrl, timeoutMs) {
     return new Promise(function (resolve) {
       const img = new Image();
@@ -1127,6 +1165,7 @@
       .join("");
   }
 })();
+
 
 
 
