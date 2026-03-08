@@ -255,6 +255,7 @@
       clearTurnstileExpiry();
       state.verification.verified = true;
       state.verification.token = "BYPASS";
+      state.verification.sessionToken = "BYPASS";
       setVerifyFeedback("人机验证已关闭，已直接放行。", "ok");
       unlockNavigation();
       return;
