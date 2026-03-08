@@ -2,71 +2,15 @@
   "groups": [
     {
       "id": "group-main",
-      "groupTitle": "主入口",
-      "groupSubtitle": "优先使用官方入口",
+      "groupTitle": "Proxy主入口",
+      "groupSubtitle": "OpenCloud(CloudFlare)",
       "items": [
         {
           "id": "main-web",
-          "name": "主站 Web",
-          "urlEncoded": "bW9jLmVscG1heGUvLzpzcHR0aA==",
-          "desc": "官方 Web 入口",
-          "tag": "推荐"
-        },
-        {
-          "id": "main-api",
-          "name": "API 网关",
-          "urlEncoded": "bW9jLmVscG1heGUuaXBhLy86c3B0dGg=",
-          "desc": "用于客户端连接",
-          "tag": "API"
-        }
-      ]
-    },
-    {
-      "id": "group-backup",
-      "groupTitle": "备用网址",
-      "groupSubtitle": "主入口异常时使用",
-      "items": [
-        {
-          "id": "backup-1",
-          "name": "备用地址 A",
-          "urlEncoded": "bW9jLmVscG1heGUuYS1wdWtjYWIvLzpzcHR0aA==",
-          "desc": "海外线路",
-          "tag": "备用"
-        },
-        {
-          "id": "backup-2",
-          "name": "备用地址 B",
-          "urlEncoded": "bW9jLmVscG1heGUuYi1wdWtjYWIvLzpzcHR0aA==",
-          "desc": "国内线路",
-          "tag": "备用"
-        }
-      ]
-    },
-    {
-      "id": "group-download",
-      "groupTitle": "下载地址",
-      "groupSubtitle": "按设备选择安装包",
-      "items": [
-        {
-          "id": "download-windows",
-          "name": "Windows 客户端",
-          "urlEncoded": "c3dvZG5pdy9tb2MuZWxwbWF4ZS5kYW9sbndvZC8vOnNwdHRo",
-          "desc": "Windows 10/11",
-          "tag": "下载"
-        },
-        {
-          "id": "download-android",
-          "name": "Android 客户端",
-          "urlEncoded": "ZGlvcmRuYS9tb2MuZWxwbWF4ZS5kYW9sbndvZC8vOnNwdHRo",
-          "desc": "Android 9+",
-          "tag": "下载"
-        },
-        {
-          "id": "download-magnet",
-          "name": "离线包（磁链）",
-          "urlEncoded": "RUxQTUFYRTpoaXRiOm5ydT10eD86dGVuZ2Ft",
-          "desc": "非 HTTP 协议，状态显示为未知",
-          "tag": "离线包"
+          "name": "ProxyWeb",
+          "urlEncoded": "https://openrealmnet001.online",
+          "desc": "入口1(CloudFlare)",
+          "tag": "Proxy"
         }
       ]
     }
