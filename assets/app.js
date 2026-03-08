@@ -19,10 +19,10 @@
       blockKeyShortcuts: true,
       enforcementMode: "lock",
     },
-    recaptcha: {
+    turnstile: {
       enabled: true,
       siteKey: "",
-      apiUrl: "https://www.recaptcha.net/recaptcha/api.js",
+      apiUrl: "https://challenges.cloudflare.com/turnstile/v0/api.js",
       hl: "zh-CN",
       theme: "light",
       size: "normal",
@@ -54,9 +54,10 @@
     verification: {
       verified: false,
       token: "",
+      sessionToken: "",
       tokenExpireTimerId: null,
     },
-    recaptcha: {
+    turnstile: {
       widgetId: null,
       apiPromise: null,
       apiReady: false,
@@ -125,8 +126,8 @@
           return;
         }
 
-        if (window.grecaptcha && state.recaptcha.widgetId !== null) {
-          window.grecaptcha.reset(state.recaptcha.widgetId);
+        if (window.turnstile && state.turnstile.widgetId !== null) {
+          window.turnstile.reset(state.turnstile.widgetId);
           setVerifyFeedback("验证码已刷新，请重新勾选。", "warn");
         } else {
           initializeVerificationFlow();
@@ -249,9 +250,9 @@
       return;
     }
 
-    if (!state.security.requireHumanCheck || !state.security.recaptcha.enabled) {
+    if (!state.security.requireHumanCheck || !state.security.turnstile.enabled) {
       hideVerifyModal();
-      clearRecaptchaExpiry();
+      clearTurnstileExpiry();
       state.verification.verified = true;
       state.verification.token = "BYPASS";
       setVerifyFeedback("人机验证已关闭，已直接放行。", "ok");
@@ -262,93 +263,93 @@
     lockNavigation("请先完成人机验证，验证前不会显示导航。", true);
     showVerifyModal();
 
-    if (!state.security.recaptcha.siteKey || state.security.recaptcha.siteKey === "YOUR_RECAPTCHA_SITE_KEY") {
-      setVerifyFeedback("请在 cfg/app.json 配置有效的 reCAPTCHA Site Key。", "error");
+    if (!state.security.turnstile.siteKey || state.security.turnstile.siteKey === "YOUR_TURNSTILE_SITE_KEY") {
+      setVerifyFeedback("请在 cfg/app.json 配置有效的 Turnstile Site Key。", "error");
       return;
     }
 
-    setVerifyFeedback("正在加载 reCAPTCHA 组件...", "warn");
+    setVerifyFeedback("正在加载 Turnstile 组件...", "warn");
 
     try {
-      await ensureRecaptchaApiLoaded();
-      renderRecaptchaWidget();
+      await ensureTurnstileApiLoaded();
+      renderTurnstileWidget();
     } catch (error) {
-      setVerifyFeedback(error.message || "reCAPTCHA 加载失败，请稍后重试。", "error");
+      setVerifyFeedback(error.message || "Turnstile 加载失败，请稍后重试。", "error");
       lockNavigation("验证服务不可用，导航继续保持隐藏。", true);
       showVerifyModal();
     }
   }
 
-  function ensureRecaptchaApiLoaded() {
-    if (state.recaptcha.apiReady && window.grecaptcha && typeof window.grecaptcha.render === "function") {
+  function ensureTurnstileApiLoaded() {
+    if (state.turnstile.apiReady && window.turnstile && typeof window.turnstile.render === "function") {
       return Promise.resolve();
     }
 
-    if (state.recaptcha.apiPromise) {
-      return state.recaptcha.apiPromise;
+    if (state.turnstile.apiPromise) {
+      return state.turnstile.apiPromise;
     }
 
-    state.recaptcha.apiPromise = new Promise(function (resolve, reject) {
-      window.onRecaptchaApiLoaded = function () {
-        state.recaptcha.apiReady = true;
+    state.turnstile.apiPromise = new Promise(function (resolve, reject) {
+      window.onTurnstileApiLoaded = function () {
+        state.turnstile.apiReady = true;
         resolve();
       };
 
       const script = document.createElement("script");
-      script.src = buildRecaptchaApiUrl(state.security.recaptcha.apiUrl, state.security.recaptcha.hl);
+      script.src = buildTurnstileApiUrl(state.security.turnstile.apiUrl, state.security.turnstile.hl);
       script.async = true;
       script.defer = true;
       script.onerror = function () {
-        reject(new Error("reCAPTCHA 脚本加载失败，请检查网络或 apiUrl 配置。"));
+        reject(new Error("Turnstile 脚本加载失败，请检查网络或 apiUrl 配置。"));
       };
 
       document.head.appendChild(script);
 
       window.setTimeout(function () {
-        if (!state.recaptcha.apiReady) {
-          reject(new Error("reCAPTCHA 加载超时，请稍后重试。"));
+        if (!state.turnstile.apiReady) {
+          reject(new Error("Turnstile 加载超时，请稍后重试。"));
         }
       }, 15000);
     }).catch(function (error) {
-      state.recaptcha.apiPromise = null;
+      state.turnstile.apiPromise = null;
       throw error;
     });
 
-    return state.recaptcha.apiPromise;
+    return state.turnstile.apiPromise;
   }
 
-  function buildRecaptchaApiUrl(baseUrl, hl) {
+  function buildTurnstileApiUrl(baseUrl, hl) {
     const connector = baseUrl.indexOf("?") >= 0 ? "&" : "?";
-    return baseUrl + connector + "onload=onRecaptchaApiLoaded&render=explicit&hl=" + encodeURIComponent(hl || "zh-CN");
+    return baseUrl + connector + "onload=onTurnstileApiLoaded&render=explicit&hl=" + encodeURIComponent(hl || "zh-CN");
   }
 
-  function renderRecaptchaWidget() {
-    if (!window.grecaptcha || typeof window.grecaptcha.render !== "function") {
-      setVerifyFeedback("reCAPTCHA 未就绪，请稍后重试。", "error");
+  function renderTurnstileWidget() {
+    if (!window.turnstile || typeof window.turnstile.render !== "function") {
+      setVerifyFeedback("Turnstile 未就绪，请稍后重试。", "error");
       return;
     }
 
-    if (state.recaptcha.widgetId !== null) {
-      window.grecaptcha.reset(state.recaptcha.widgetId);
+    if (state.turnstile.widgetId !== null) {
+      window.turnstile.reset(state.turnstile.widgetId);
       return;
     }
 
     try {
-      state.recaptcha.widgetId = window.grecaptcha.render("recaptcha-container", {
-        sitekey: state.security.recaptcha.siteKey,
-        theme: state.security.recaptcha.theme,
-        size: state.security.recaptcha.size,
-        callback: handleRecaptchaSuccess,
-        "expired-callback": handleRecaptchaExpired,
-        "error-callback": handleRecaptchaError,
+      state.turnstile.widgetId = window.turnstile.render("turnstile-container", {
+        sitekey: state.security.turnstile.siteKey,
+        theme: state.security.turnstile.theme,
+        size: state.security.turnstile.size,
+        callback: handleTurnstileSuccess,
+        "expired-callback": handleTurnstileExpired,
+        "error-callback": handleTurnstileError,
       });
       setVerifyFeedback("请完成勾选验证。", "warn");
     } catch (error) {
-      setVerifyFeedback("reCAPTCHA 渲染失败，请检查 Site Key。", "error");
+      setVerifyFeedback("Turnstile 渲染失败，请检查 Site Key。", "error");
     }
   }
 
-  function handleRecaptchaSuccess(token) {
+  async function handleTurnstileSuccess(token) {
     if (state.debugGuard.active) {
       return;
     }
@@ -358,42 +359,80 @@
       return;
     }
 
-    state.verification.verified = true;
-    state.verification.token = token;
+    setVerifyFeedback("正在校验 Turnstile 结果...", "warn");
 
-    setVerifyFeedback("验证成功，正在解锁导航...", "ok");
-    hideVerifyModal();
-    unlockNavigation();
-    scheduleRecaptchaExpiry();
+    try {
+      const sessionToken = await verifyTurnstileToken(token);
+      state.verification.verified = true;
+      state.verification.token = token;
+      state.verification.sessionToken = sessionToken;
+
+      setVerifyFeedback("验证成功，正在解锁导航...", "ok");
+      hideVerifyModal();
+      unlockNavigation();
+      scheduleTurnstileExpiry();
+    } catch (error) {
+      state.verification.verified = false;
+      state.verification.token = "";
+      state.verification.sessionToken = "";
+      setVerifyFeedback(error.message || "Turnstile 校验失败", "error");
+      showVerifyModal();
+      lockNavigation("验证失败，导航继续保持隐藏。", true);
+    }
   }
 
-  function handleRecaptchaExpired() {
+  async function verifyTurnstileToken(token) {
+    const resp = await fetch("/api/verify-human", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ token }),
+      cache: "no-store",
+      credentials: "same-origin",
+    });
+
+    if (!resp.ok) {
+      throw new Error("验证服务不可用");
+    }
+
+    const data = await resp.json();
+    if (!data || data.ok !== true || !data.sessionToken) {
+      throw new Error((data && data.message) || "Turnstile 服务端校验失败");
+    }
+
+    return data.sessionToken;
+  }
+
+  function handleTurnstileExpired() {
     if (state.debugGuard.active) {
       return;
     }
 
     state.verification.verified = false;
     state.verification.token = "";
+    state.verification.sessionToken = "";
     lockNavigation("验证已过期，请重新进行人机验证。", true);
     showVerifyModal();
     setVerifyFeedback("验证已过期，请重新勾选。", "warn");
   }
 
-  function handleRecaptchaError() {
+  function handleTurnstileError() {
     if (state.debugGuard.active) {
       return;
     }
 
     state.verification.verified = false;
     state.verification.token = "";
+    state.verification.sessionToken = "";
     lockNavigation("验证失败，导航继续保持隐藏。", true);
     showVerifyModal();
     setVerifyFeedback("验证组件异常，请点击“刷新验证”。", "error");
   }
 
-  function scheduleRecaptchaExpiry() {
-    clearRecaptchaExpiry();
-    const ttlMs = state.security.recaptcha.tokenTTLSeconds * 1000;
+  function scheduleTurnstileExpiry() {
+    clearTurnstileExpiry();
+    const ttlMs = state.security.turnstile.tokenTTLSeconds * 1000;
 
     state.verification.tokenExpireTimerId = window.setTimeout(function () {
       if (state.debugGuard.active) {
@@ -401,16 +440,17 @@
       }
       state.verification.verified = false;
       state.verification.token = "";
+      state.verification.sessionToken = "";
       lockNavigation("验证状态失效，请重新验证。", true);
       showVerifyModal();
-      if (window.grecaptcha && state.recaptcha.widgetId !== null) {
-        window.grecaptcha.reset(state.recaptcha.widgetId);
+      if (window.turnstile && state.turnstile.widgetId !== null) {
+        window.turnstile.reset(state.turnstile.widgetId);
       }
       setVerifyFeedback("验证已失效，请重新勾选。", "warn");
     }, ttlMs);
   }
 
-  function clearRecaptchaExpiry() {
+  function clearTurnstileExpiry() {
     if (state.verification.tokenExpireTimerId) {
       clearTimeout(state.verification.tokenExpireTimerId);
       state.verification.tokenExpireTimerId = null;
@@ -428,8 +468,9 @@
 
   function lockNavigation(message, keepMasked) {
     stopPolling();
-    clearRecaptchaExpiry();
+    clearTurnstileExpiry();
     state.verification.verified = false;
+    state.verification.sessionToken = "";
     setCheckNowEnabled(false);
 
     const groupsEl = document.getElementById("link-groups");
@@ -770,8 +811,14 @@
     const apiPath = "/api/probe?url=" + encodeURIComponent(parsed.href);
 
     try {
+      const headers = {};
+      if (state.verification.sessionToken) {
+        headers["x-human-token"] = state.verification.sessionToken;
+      }
+
       const response = await fetch(apiPath, {
         method: "GET",
+        headers,
         cache: "no-store",
         credentials: "same-origin",
       });
@@ -1022,7 +1069,7 @@
 
   function resolveSecurityConfig(input) {
     const source = typeof input === "object" && input !== null ? input : {};
-    const sourceRecaptcha = typeof source.recaptcha === "object" && source.recaptcha !== null ? source.recaptcha : {};
+    const sourceTurnstile = typeof source.turnstile === "object" && source.turnstile !== null ? source.turnstile : {};
     const sourceAntiDebug = typeof source.antiDebug === "object" && source.antiDebug !== null ? source.antiDebug : {};
 
     return {
@@ -1038,14 +1085,14 @@
         blockKeyShortcuts: sourceAntiDebug.blockKeyShortcuts !== false,
         enforcementMode: sourceAntiDebug.enforcementMode === "warn" ? "warn" : "lock",
       },
-      recaptcha: {
-        enabled: sourceRecaptcha.enabled !== false,
-        siteKey: typeof sourceRecaptcha.siteKey === "string" ? sourceRecaptcha.siteKey.trim() : "",
-        apiUrl: typeof sourceRecaptcha.apiUrl === "string" && sourceRecaptcha.apiUrl.trim() ? sourceRecaptcha.apiUrl.trim() : DEFAULT_SECURITY.recaptcha.apiUrl,
-        hl: typeof sourceRecaptcha.hl === "string" && sourceRecaptcha.hl.trim() ? sourceRecaptcha.hl.trim() : DEFAULT_SECURITY.recaptcha.hl,
-        theme: sourceRecaptcha.theme === "dark" ? "dark" : "light",
-        size: sourceRecaptcha.size === "compact" ? "compact" : "normal",
-        tokenTTLSeconds: normalizeNumber(sourceRecaptcha.tokenTTLSeconds, DEFAULT_SECURITY.recaptcha.tokenTTLSeconds, 60, 600),
+      turnstile: {
+        enabled: sourceTurnstile.enabled !== false,
+        siteKey: typeof sourceTurnstile.siteKey === "string" ? sourceTurnstile.siteKey.trim() : "",
+        apiUrl: typeof sourceTurnstile.apiUrl === "string" && sourceTurnstile.apiUrl.trim() ? sourceTurnstile.apiUrl.trim() : DEFAULT_SECURITY.turnstile.apiUrl,
+        hl: typeof sourceTurnstile.hl === "string" && sourceTurnstile.hl.trim() ? sourceTurnstile.hl.trim() : DEFAULT_SECURITY.turnstile.hl,
+        theme: sourceTurnstile.theme === "dark" ? "dark" : "light",
+        size: sourceTurnstile.size === "compact" ? "compact" : "normal",
+        tokenTTLSeconds: normalizeNumber(sourceTurnstile.tokenTTLSeconds, DEFAULT_SECURITY.turnstile.tokenTTLSeconds, 60, 600),
       },
     };
   }
@@ -1056,7 +1103,7 @@
       useObfuscatedLinks: DEFAULT_SECURITY.useObfuscatedLinks,
       probeRateLimitMs: DEFAULT_SECURITY.probeRateLimitMs,
       antiDebug: Object.assign({}, DEFAULT_SECURITY.antiDebug),
-      recaptcha: Object.assign({}, DEFAULT_SECURITY.recaptcha),
+      turnstile: Object.assign({}, DEFAULT_SECURITY.turnstile),
     };
   }
 

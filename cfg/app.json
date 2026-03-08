@@ -21,14 +21,14 @@
                                           "blockKeyShortcuts":  true,
                                           "enforcementMode":  "warn"
                                       },
-                        "recaptcha":  {
-                                          "enabled":  false,
-                                          "siteKey":  "b",
-                                          "apiUrl":  "https://www.recaptcha.net/recaptcha/api.js",
-                                          "hl":  "zh-CN",
-                                          "theme":  "light",
+                        "turnstile":  {
                                           "size":  "normal",
-                                          "tokenTTLSeconds":  110
+                                          "theme":  "light",
+                                          "siteKey":  "0x4AAAAAACoBi3aCrrM6KQ_c",
+                                          "apiUrl":  "https://challenges.cloudflare.com/turnstile/v0/api.js",
+                                          "tokenTTLSeconds":  110,
+                                          "hl":  "zh-CN",
+                                          "enabled":  true
                                       }
                     }
 }

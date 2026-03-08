@@ -307,7 +307,7 @@ body.site-masked {
   font-size: 14px;
 }
 
-.recaptcha-container {
+.turnstile-container {
   min-height: 78px;
   display: grid;
   align-items: center;
@@ -535,3 +535,4 @@ body.site-masked {
     transform: translateY(0);
   }
 }
+
