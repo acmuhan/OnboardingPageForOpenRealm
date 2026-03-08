@@ -28,7 +28,7 @@
                                           "apiUrl":  "https://challenges.cloudflare.com/turnstile/v0/api.js",
                                           "tokenTTLSeconds":  110,
                                           "hl":  "zh-CN",
-                                          "enabled":  true
+                                          "enabled":  false
                                       }
                     }
 }
