@@ -9,7 +9,7 @@
                          "navTitle":  "导航"
                      },
     "antiCrawler":  {
-                        "requireHumanCheck":  true,
+                        "requireHumanCheck":  false,
                         "useObfuscatedLinks":  true,
                         "probeRateLimitMs":  1200,
                         "antiDebug":  {
