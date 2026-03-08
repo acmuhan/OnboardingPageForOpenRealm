@@ -30,7 +30,9 @@
   };
 
   const STATUS_META = {
-    probable: { text: "可能可用", className: "status-probable" },
+    probable: { text: "可达", className: "status-probable" },
+    challenge: { text: "疑似验证", className: "status-challenge" },
+    timeout: { text: "超时", className: "status-timeout" },
     unknown: { text: "未知", className: "status-unknown" },
     error: { text: "异常", className: "status-error" },
   };
@@ -751,11 +753,18 @@
       return { status: "unknown", message: "协议不支持检测" };
     }
 
-    const controller = new AbortController();
     const timeoutMs = 4500;
-    const timer = setTimeout(function () {
-      controller.abort();
+
+    // HTTP-level ping approximation (ICMP ping is unavailable in browsers).
+    const fetchController = new AbortController();
+    const fetchStart = performance.now();
+    const fetchTimer = setTimeout(function () {
+      fetchController.abort();
     }, timeoutMs);
+
+    let fetchOk = false;
+    let fetchTimeout = false;
+    let fetchCost = 0;
 
     try {
       await fetch(parsed.href, {
@@ -763,17 +772,78 @@
         mode: "no-cors",
         cache: "no-store",
         redirect: "follow",
-        signal: controller.signal,
+        signal: fetchController.signal,
       });
-      return { status: "probable", message: "可达性探测通过" };
+      fetchOk = true;
+      fetchCost = Math.round(performance.now() - fetchStart);
     } catch (error) {
-      if (error && error.name === "AbortError") {
-        return { status: "error", message: "检测超时" };
-      }
-      return { status: "error", message: "检测异常" };
+      fetchTimeout = Boolean(error && error.name === "AbortError");
     } finally {
-      clearTimeout(timer);
+      clearTimeout(fetchTimer);
     }
+
+    if (fetchOk) {
+      return {
+        status: "probable",
+        message: "HTTP Ping " + fetchCost + "ms",
+      };
+    }
+
+    const imageProbe = await probeImageReachability(parsed, timeoutMs);
+
+    if (fetchTimeout || imageProbe.timeout) {
+      return {
+        status: "timeout",
+        message: "连接超时（可能网络阻断）",
+      };
+    }
+
+    if (imageProbe.ok) {
+      return {
+        status: "challenge",
+        message: "疑似触发人机验证/反爬策略",
+      };
+    }
+
+    return {
+      status: "error",
+      message: "连接异常（DNS/TLS/拦截）",
+    };
+  }
+
+  function probeImageReachability(parsedUrl, timeoutMs) {
+    return new Promise(function (resolve) {
+      const img = new Image();
+      let settled = false;
+      const start = performance.now();
+      const probeUrl = parsedUrl.origin + "/favicon.ico?__probe=" + Date.now();
+
+      const done = function (result) {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        img.onload = null;
+        img.onerror = null;
+        resolve(result);
+      };
+
+      const timer = setTimeout(function () {
+        done({ ok: false, timeout: true, latencyMs: Math.round(performance.now() - start) });
+      }, timeoutMs);
+
+      img.onload = function () {
+        done({ ok: true, timeout: false, latencyMs: Math.round(performance.now() - start) });
+      };
+
+      img.onerror = function () {
+        done({ ok: false, timeout: false, latencyMs: Math.round(performance.now() - start) });
+      };
+
+      img.referrerPolicy = "no-referrer";
+      img.src = probeUrl;
+    });
   }
 
   function startPolling() {
@@ -828,7 +898,7 @@
       return;
     }
 
-    labelEl.textContent = "自动检测间隔：每 " + state.pollingSeconds + " 秒";
+    labelEl.textContent = "自动检测间隔：每 " + state.pollingSeconds + " 秒（HTTP Ping/验证探测）";
   }
 
   async function loadJson(path, label) {
@@ -1057,6 +1127,8 @@
       .join("");
   }
 })();
+
+
 
 
 

@@ -384,9 +384,15 @@ body.site-masked {
   color: var(--unknown-text);
 }
 
-.status-error {
-  background: var(--bad-bg);
-  color: var(--bad-text);
+
+.status-challenge {
+  background: #fff2e2;
+  color: #a55b03;
+}
+
+.status-timeout {
+  background: #ffe9cc;
+  color: #a04b00;
 }
 
 .noscript-note {
@@ -434,3 +440,4 @@ body.site-masked {
   line-height: 1.6;
   color: #b8c6ea;
 }
+
