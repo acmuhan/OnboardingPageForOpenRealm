@@ -22,7 +22,7 @@
     },
     "recaptcha": {
       "enabled": true,
-      "siteKey": "YOUR_RECAPTCHA_SITE_KEY",
+      "siteKey": "6LcOsYMsAAAAAPSUI0-LOKLBxCN4dCcXjBXqHdcR",
       "apiUrl": "https://www.recaptcha.net/recaptcha/api.js",
       "hl": "zh-CN",
       "theme": "light",
