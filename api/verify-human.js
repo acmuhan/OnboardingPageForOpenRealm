@@ -36,6 +36,50 @@ function makeSessionToken() {
   return `${payloadB64}.${sig}`;
 }
 
+function tryParseJson(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function extractToken(req) {
+  const body = req.body;
+
+  if (body && typeof body === "object") {
+    return String(body.token || "").trim();
+  }
+
+  if (typeof body === "string") {
+    const raw = body.trim();
+    if (!raw) return "";
+
+    const json = tryParseJson(raw);
+    if (json && typeof json === "object") {
+      return String(json.token || "").trim();
+    }
+
+    const formToken = new URLSearchParams(raw).get("token");
+    return String(formToken || "").trim();
+  }
+
+  if (Buffer.isBuffer(body)) {
+    const raw = body.toString("utf8").trim();
+    if (!raw) return "";
+
+    const json = tryParseJson(raw);
+    if (json && typeof json === "object") {
+      return String(json.token || "").trim();
+    }
+
+    const formToken = new URLSearchParams(raw).get("token");
+    return String(formToken || "").trim();
+  }
+
+  return "";
+}
+
 module.exports = async function handler(req, res) {
   setCors(res);
 
@@ -55,9 +99,16 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const token = String(req.body?.token || "").trim();
+  const token = extractToken(req);
   if (!token) {
-    res.status(400).json({ ok: false, message: "缺少 token" });
+    res.status(400).json({
+      ok: false,
+      message: "缺少 token",
+      detail: {
+        contentType: String(req.headers["content-type"] || ""),
+        bodyType: typeof req.body,
+      },
+    });
     return;
   }
 
@@ -76,11 +127,15 @@ module.exports = async function handler(req, res) {
 
     const verifyData = await verifyResp.json();
     if (!verifyData || verifyData.success !== true) {
-      const codes = Array.isArray(verifyData && verifyData["error-codes"])
+      const codes = Array.isArray(verifyData?.["error-codes"])
         ? verifyData["error-codes"]
         : [];
-      const detail = codes.length ? `（${codes.join(",")}）` : "";
-      res.status(200).json({ ok: false, message: `Turnstile 校验未通过${detail}`, codes });
+      res.status(200).json({
+        ok: false,
+        message: "Turnstile 校验未通过",
+        codes,
+        detail: { "error-codes": codes },
+      });
       return;
     }
 
@@ -89,8 +144,12 @@ module.exports = async function handler(req, res) {
       sessionToken: makeSessionToken(),
       expiresInSeconds: 600,
     });
-  } catch (error) {
-    const msg = error && error.message ? `: ${error.message}` : "";
-    res.status(200).json({ ok: false, message: `Turnstile 校验服务异常${msg}` });
+  } catch (err) {
+    const error = String(err?.message || err || "unknown");
+    res.status(200).json({
+      ok: false,
+      message: `Turnstile 校验服务异常: ${error}`,
+      detail: { error },
+    });
   }
 };
