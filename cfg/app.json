@@ -38,7 +38,7 @@
       "captchaId": "75c64d6651c4c098742068c538126ed3",
       "apiUrl": "https://static.geetest.com/v4/gt4.js",
       "lang": "zh-cn",
-      "product": "bind"
+      "product": "popup"
     }
   }
 }

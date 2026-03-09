@@ -34,7 +34,7 @@
       captchaId: "",
       apiUrl: "https://static.geetest.com/v4/gt4.js",
       lang: "zh-cn",
-      product: "bind",
+      product: "popup",
     },
   };
 
@@ -508,6 +508,9 @@
         captchaObj.onReady(function () {
           setTurnstileLoading(false);
           setVerifyFeedback("请完成极验验证。", "warn");
+          if (state.security.geetest.product !== "float" && typeof captchaObj.showCaptcha === "function") {
+            captchaObj.showCaptcha();
+          }
         });
         captchaObj.onSuccess(function () {
           handleGeetestSuccess(captchaObj);
@@ -1443,7 +1446,7 @@
         captchaId: typeof sourceGeetest.captchaId === "string" ? sourceGeetest.captchaId.trim() : "",
         apiUrl: typeof sourceGeetest.apiUrl === "string" && sourceGeetest.apiUrl.trim() ? sourceGeetest.apiUrl.trim() : DEFAULT_SECURITY.geetest.apiUrl,
         lang: typeof sourceGeetest.lang === "string" && sourceGeetest.lang.trim() ? sourceGeetest.lang.trim() : DEFAULT_SECURITY.geetest.lang,
-        product: sourceGeetest.product === "float" || sourceGeetest.product === "popup" ? sourceGeetest.product : DEFAULT_SECURITY.geetest.product,
+        product: sourceGeetest.product === "float" || sourceGeetest.product === "popup" || sourceGeetest.product === "bind" ? sourceGeetest.product : DEFAULT_SECURITY.geetest.product,
       },
     };
   }
@@ -1548,6 +1551,7 @@
       .join("");
   }
 })();
+
 
 
 
