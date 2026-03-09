@@ -336,7 +336,7 @@
     }
 
     try {
-      state.turnstile.widgetId = window.turnstile.render("turnstile-container", {
+      state.turnstile.widgetId = window.turnstile.render("#turnstile-container", {
         sitekey: state.security.turnstile.siteKey,
         theme: state.security.turnstile.theme,
         size: state.security.turnstile.size,
@@ -1232,6 +1232,7 @@
       .join("");
   }
 })();
+
 
 
 
