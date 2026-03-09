@@ -84,11 +84,12 @@ async function fetchCountryByIp9(ip) {
   const cached = readCountryCache(ip);
   if (cached) return cached;
 
-  const endpoint = `https://www.ip9.com.cn/get?ip=${encodeURIComponent(ip)}`;
+  const endpoint = `https://ip9.com.cn/get?ip=${encodeURIComponent(ip)}`;
   const resp = await fetch(endpoint, { method: "GET", cache: "no-store" });
   if (!resp.ok) return "";
 
   const data = await resp.json();
+  if (Number(data?.ret) !== 200) return "";
   const countryCode = String(data?.data?.country_code || "").toUpperCase();
   if (!countryCode) return "";
 
@@ -219,6 +220,7 @@ module.exports = async function handler(req, res) {
     });
   }
 };
+
 
 
 
