@@ -112,11 +112,12 @@ module.exports = async function handler(req, res) {
 
     const geetest = anti && anti.geetest ? anti.geetest : {};
     const geetestReady = geetest.enabled !== false && typeof geetest.captchaId === "string" && geetest.captchaId.trim().length > 0;
+    const allowIp9Fallback = anti.allowIp9Fallback !== false;
 
     let country = String(getHeader(req, "cf-ipcountry") || "").toUpperCase();
     let source = "cf-ipcountry";
 
-    if (!country || country === "XX") {
+    if ((!country || country === "XX") && allowIp9Fallback) {
       source = "ip9";
       const ip = normalizeIp(getClientIp(req));
 
@@ -130,6 +131,8 @@ module.exports = async function handler(req, res) {
       } else {
         source = "private-ip";
       }
+    } else if (!country || country === "XX") {
+      source = "no-fallback";
     }
 
     const provider = pickProviderByStrategy(strategy, country, geetestReady);
@@ -140,6 +143,7 @@ module.exports = async function handler(req, res) {
       strategy,
       country: country || "UNKNOWN",
       source,
+      allowIp9Fallback,
     });
   } catch {
     res.status(200).json({
@@ -151,3 +155,4 @@ module.exports = async function handler(req, res) {
     });
   }
 };
+
