@@ -84,6 +84,17 @@
     },
   };
 
+  window.addEventListener("error", function (event) {
+    const message = event && event.error && event.error.message ? event.error.message : (event && event.message ? event.message : "脚本运行异常");
+    revealFatalError(message);
+  });
+
+  window.addEventListener("unhandledrejection", function (event) {
+    const reason = event && event.reason ? event.reason : "Promise 未处理异常";
+    const message = typeof reason === "string" ? reason : (reason && reason.message ? reason.message : "Promise 未处理异常");
+    revealFatalError(message);
+  });
+
   document.addEventListener("DOMContentLoaded", init);
 
   async function init() {
@@ -114,6 +125,18 @@
     }
   }
 
+  
+  function revealFatalError(message) {
+    try {
+      const modal = document.getElementById("verify-modal");
+      if (modal) {
+        modal.classList.add("hidden");
+      }
+    } catch {}
+
+    applySiteMask(false);
+    showError("初始化失败：" + String(message || "未知异常"));
+  }
   function bindActions() {
     const checkNowButton = document.getElementById("check-now-btn");
     if (checkNowButton) {
@@ -1525,6 +1548,7 @@
       .join("");
   }
 })();
+
 
 
 
