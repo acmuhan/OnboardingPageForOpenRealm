@@ -346,7 +346,8 @@
       });
       setVerifyFeedback("请完成勾选验证。", "warn");
     } catch (error) {
-      setVerifyFeedback("Turnstile 渲染失败，请检查 Site Key。", "error");
+      const detail = error && error.message ? `（${error.message}）` : "";
+      setVerifyFeedback(`Turnstile 渲染失败，请检查 Site Key 或主机名绑定${detail}`, "error");
     }
   }
 
@@ -450,7 +451,7 @@
     setVerifyFeedback("验证已过期，请重新勾选。", "warn");
   }
 
-  function handleTurnstileError() {
+  function handleTurnstileError(errorCode) {
     if (state.debugGuard.active) {
       return;
     }
@@ -460,7 +461,10 @@
     state.verification.sessionToken = "";
     lockNavigation("验证失败，导航继续保持隐藏。", true);
     showVerifyModal();
-    setVerifyFeedback("验证组件异常，请点击“刷新验证”。", "error");
+
+    const codeText = typeof errorCode === "string" && errorCode ? errorCode : "unknown";
+    const currentKey = state.security.turnstile.siteKey || "(empty)";
+    setVerifyFeedback(`验证组件异常（code: ${codeText}，siteKey: ${currentKey}），请检查 Site Key 与主机名绑定。`, "error");
   }
 
   function scheduleTurnstileExpiry() {
@@ -1228,6 +1232,8 @@
       .join("");
   }
 })();
+
+
 
 
 
