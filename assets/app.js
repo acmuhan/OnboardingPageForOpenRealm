@@ -435,7 +435,10 @@
     } catch (error) {
       const detail = error && error.message ? `（${error.message}）` : "";
       setTurnstileLoading(false);
-      setVerifyFeedback(`验证组件渲染失败，请检查 Site Key 与主机名绑定${detail}`, "error");
+      const switched = tryFallbackToGeetest(`Turnstile 渲染失败${detail}`);
+      if (!switched) {
+        setVerifyFeedback(`验证组件渲染失败，请检查 Site Key 与主机名绑定${detail}`, "error");
+      }
     }
   }
 
@@ -674,6 +677,32 @@
     }
 
     throw lastError || new Error("验证失败");
+  }
+
+  function tryFallbackToGeetest(reason) {
+    const canUseGeetest = state.security.verifyProvider === "auto"
+      && state.security.geetest.enabled !== false
+      && typeof state.security.geetest.captchaId === "string"
+      && state.security.geetest.captchaId.trim().length > 0;
+
+    if (!canUseGeetest || state.turnstile.provider === "geetest") {
+      return false;
+    }
+
+    state.turnstile.provider = "geetest";
+    setTurnstileLoading(true, "正在切换到极验...");
+    setVerifyFeedback(`Turnstile 异常，正在切换极验验证。${reason ? ` 原因：${reason}` : ""}`, "warn");
+
+    ensureGeetestApiLoaded()
+      .then(function () {
+        renderGeetestWidget();
+      })
+      .catch(function () {
+        setTurnstileLoading(false);
+        setVerifyFeedback("切换极验失败，请稍后重试。", "error");
+      });
+
+    return true;
   }
 
   function handleTurnstileExpired() {
@@ -1471,6 +1500,7 @@
       .join("");
   }
 })();
+
 
 
 

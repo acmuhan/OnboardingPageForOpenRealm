@@ -18,17 +18,38 @@ function getHeader(req, key) {
 }
 
 function getClientIp(req) {
-  const xff = getHeader(req, "x-forwarded-for");
-  if (xff) {
-    return xff.split(",")[0].trim();
+  const candidates = [
+    getHeader(req, "cf-connecting-ip"),
+    getHeader(req, "x-real-ip"),
+    getHeader(req, "true-client-ip"),
+    getHeader(req, "x-forwarded-for"),
+    req.socket?.remoteAddress || "",
+  ];
+
+  for (const raw of candidates) {
+    const val = String(raw || "").trim();
+    if (!val) continue;
+    if (val.includes(",")) {
+      const first = val.split(",")[0].trim();
+      if (first) return first;
+      continue;
+    }
+    return val;
   }
-  return req.socket?.remoteAddress || "";
+
+  return "";
 }
 
 function normalizeIp(raw) {
-  const ip = String(raw || "").trim();
+  let ip = String(raw || "").trim();
   if (!ip) return "";
-  if (ip.startsWith("::ffff:")) return ip.slice(7);
+  if (ip.startsWith("[") && ip.includes("]")) {
+    ip = ip.slice(1, ip.indexOf("]"));
+  }
+  if (ip.startsWith("::ffff:")) ip = ip.slice(7);
+  if (/^\d+\.\d+\.\d+\.\d+:\d+$/.test(ip)) {
+    ip = ip.split(":")[0];
+  }
   return ip;
 }
 
@@ -164,6 +185,7 @@ module.exports = async function handler(req, res) {
     }
 
     const provider = pickProviderByStrategy(strategy, country, geetestReady);
+    const detectedIp = normalizeIp(getClientIp(req));
 
     res.status(200).json({
       ok: true,
@@ -173,6 +195,11 @@ module.exports = async function handler(req, res) {
       source,
       allowIp9Fallback,
       preferIp9First,
+      debug: {
+        detectedIp,
+        cfCountry,
+        geetestReady,
+      },
     });
   } catch {
     res.status(200).json({
@@ -184,5 +211,6 @@ module.exports = async function handler(req, res) {
     });
   }
 };
+
 
 
