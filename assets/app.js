@@ -475,7 +475,7 @@
       setTurnstileLoading(false);
       const switched = tryFallbackToGeetest(`Turnstile 渲染失败${detail}`);
       if (!switched) {
-        setVerifyFeedback(`验证组件渲染失败，请检查 Site Key 与主机名绑定${detail}`, "error");
+        setVerifyFeedback("验证组件渲染失败，请稍后重试。", "error");
       }
     }
   }
@@ -750,7 +750,7 @@
 
     state.turnstile.provider = "geetest";
     setTurnstileLoading(true, "正在切换到极验...");
-    setVerifyFeedback(`Turnstile 异常，正在切换极验验证。${reason ? ` 原因：${reason}` : ""}`, "warn");
+    setVerifyFeedback("当前验证不可用，正在切换备用验证...", "warn");
 
     ensureGeetestApiLoaded()
       .then(function () {
@@ -929,6 +929,29 @@
     }
   }
 
+  
+  function setButtonLoading(button, loading, text) {
+    if (!button) return;
+
+    if (loading) {
+      button.dataset.prevDisabled = button.disabled ? "1" : "0";
+      button.disabled = true;
+      button.classList.add("is-loading");
+      if (typeof text === "string" && text) {
+        button.textContent = text;
+      }
+      return;
+    }
+
+    button.classList.remove("is-loading");
+    if (button.dataset.prevDisabled === "0") {
+      button.disabled = false;
+    }
+    delete button.dataset.prevDisabled;
+    if (typeof text === "string" && text) {
+      button.textContent = text;
+    }
+  }
   function setCheckNowEnabled(enabled) {
     const btn = document.getElementById("check-now-btn");
     btn.disabled = !enabled;
@@ -1570,6 +1593,7 @@
       .join("");
   }
 })();
+
 
 
 

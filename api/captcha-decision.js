@@ -194,7 +194,6 @@ module.exports = async function handler(req, res) {
     }
 
     const provider = pickProviderByStrategy(strategy, country, geetestReady);
-    const detectedIp = normalizeIp(getClientIp(req));
 
     res.status(200).json({
       ok: true,
@@ -204,11 +203,6 @@ module.exports = async function handler(req, res) {
       source,
       allowIp9Fallback,
       preferIp9First,
-      debug: {
-        detectedIp,
-        cfCountry,
-        geetestReady,
-      },
     });
   } catch {
     res.status(200).json({
@@ -220,6 +214,7 @@ module.exports = async function handler(req, res) {
     });
   }
 };
+
 
 
 
