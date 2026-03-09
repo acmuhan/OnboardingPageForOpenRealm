@@ -45,6 +45,7 @@
     noticesData: null,
     linksData: null,
     rawGroups: [],
+    contentLoaded: false,
     pollTimerId: null,
     linksForProbe: [],
     checking: false,
@@ -87,20 +88,8 @@
       state.security = resolveSecurityConfig(cfg.antiCrawler);
       updateHeader(cfg);
 
-      const [noticesData, linksData] = await Promise.all([
-        loadJson(cfg.noticeSource, "公告数据(data/notices)"),
-        loadJson(cfg.linkSource, "链接数据(data/links)"),
-      ]);
-
-      validateNotices(noticesData);
-      validateLinks(linksData);
-
-      state.noticesData = noticesData;
-      state.linksData = linksData;
-      state.rawGroups = linksData.groups;
-
       renderLabels(cfg.customLabels);
-      renderNotices(noticesData.notices);
+      renderNotices([]);
 
       setupAntiDebugGuards();
       await initializeVerificationFlow();
@@ -256,6 +245,15 @@
       state.verification.verified = true;
       state.verification.token = "BYPASS";
       state.verification.sessionToken = "BYPASS";
+      try {
+        await ensureProtectedContentLoaded();
+      } catch (error) {
+        setVerifyFeedback(error.message || "内容加载失败，请稍后重试。", "error");
+        lockNavigation("验证通过，但内容服务不可用。", true);
+        showVerifyModal();
+        return;
+      }
+
       setVerifyFeedback("人机验证已关闭，已直接放行。", "ok");
       unlockNavigation();
       return;
@@ -369,6 +367,8 @@
       state.verification.token = token;
       state.verification.sessionToken = sessionToken;
 
+      await ensureProtectedContentLoaded();
+
       setVerifyFeedback("Verification passed. Unlocking links...", "ok");
       hideVerifyModal();
       unlockNavigation();
@@ -386,6 +386,56 @@
     }
   }
 
+  async function ensureProtectedContentLoaded() {
+    if (state.contentLoaded) {
+      return;
+    }
+
+    const headers = {};
+    if (state.verification.sessionToken) {
+      headers["x-human-token"] = state.verification.sessionToken;
+    }
+
+    let response;
+    try {
+      response = await fetch("/api/content", {
+        method: "GET",
+        headers,
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+    } catch {
+      throw new Error("内容服务不可用，请稍后重试。");
+    }
+
+    if (!response.ok) {
+      throw new Error("内容服务异常(" + response.status + ")");
+    }
+
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new Error("内容数据解析失败");
+    }
+
+    const noticesData = {
+      notices: payload && Array.isArray(payload.notices) ? payload.notices : [],
+    };
+    const linksData = {
+      groups: payload && Array.isArray(payload.groups) ? payload.groups : [],
+    };
+
+    validateNotices(noticesData);
+    validateLinks(linksData);
+
+    state.noticesData = noticesData;
+    state.linksData = linksData;
+    state.rawGroups = linksData.groups;
+    state.contentLoaded = true;
+
+    renderNotices(noticesData.notices);
+  }
   function sleep(ms) {
     return new Promise(function (resolve) {
       window.setTimeout(resolve, ms);
@@ -1232,6 +1282,12 @@
       .join("");
   }
 })();
+
+
+
+
+
+
 
 
 
