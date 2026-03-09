@@ -65,6 +65,7 @@
       token: "",
       sessionToken: "",
       tokenExpireTimerId: null,
+      submitting: false,
     },
     turnstile: {
       provider: "turnstile",
@@ -480,6 +481,16 @@
   }
 
   function renderGeetestWidget() {
+    if (state.geetest.instance && typeof state.geetest.instance.reset === "function") {
+      state.geetest.instance.reset();
+      if (typeof state.geetest.instance.showCaptcha === "function") {
+        state.geetest.instance.showCaptcha();
+      }
+      setTurnstileLoading(false);
+      setVerifyFeedback("请完成极验验证。", "warn");
+      return;
+    }
+
     const captchaId = String(state.security.geetest.captchaId || "").trim();
     if (!captchaId) {
       setTurnstileLoading(false);
@@ -524,9 +535,11 @@
   }
 
   async function handleTurnstileSuccess(token) {
-    if (state.debugGuard.active) {
+    if (state.debugGuard.active || state.verification.submitting) {
       return;
     }
+
+    state.verification.submitting = true;
 
     if (!token) {
       setTurnstileLoading(false);
@@ -567,9 +580,11 @@
   }
 
   async function handleGeetestSuccess(captchaObj) {
-    if (state.debugGuard.active) {
+    if (state.debugGuard.active || state.verification.submitting) {
       return;
     }
+
+    state.verification.submitting = true;
 
     const validate = captchaObj && typeof captchaObj.getValidate === "function"
       ? captchaObj.getValidate()
@@ -614,6 +629,8 @@
       setVerifyFeedback((error.message || "验证失败") + "，验证已刷新。", "error");
       showVerifyModal();
       lockNavigation("验证失败，导航继续隐藏。", true);
+    } finally {
+      state.verification.submitting = false;
     }
   }
 
@@ -696,11 +713,13 @@
         }
 
         if (!resp.ok) {
-          throw new Error((data && data.message) || "验证服务不可用");
+          const reason = data && data.detail && data.detail.reason ? ` (${data.detail.reason})` : "";
+          throw new Error(((data && data.message) || "验证服务不可用") + reason);
         }
 
         if (!data || data.ok !== true || !data.sessionToken) {
-          throw new Error((data && data.message) || "验证结果校验失败");
+          const reason = data && data.detail && data.detail.reason ? ` (${data.detail.reason})` : "";
+          throw new Error(((data && data.message) || "验证结果校验失败") + reason);
         }
 
         return data.sessionToken;
@@ -1551,6 +1570,7 @@
       .join("");
   }
 })();
+
 
 
 
