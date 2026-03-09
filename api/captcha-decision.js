@@ -184,6 +184,14 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    if ((!country || country === "XX") && geetestReady) {
+      const lang = String(getHeader(req, "accept-language") || "").toLowerCase();
+      if (lang.includes("zh-cn") || lang.startsWith("zh")) {
+        country = "CN";
+        source = "accept-language";
+      }
+    }
+
     const provider = pickProviderByStrategy(strategy, country, geetestReady);
     const detectedIp = normalizeIp(getClientIp(req));
 
@@ -211,6 +219,7 @@ module.exports = async function handler(req, res) {
     });
   }
 };
+
 
 
 
