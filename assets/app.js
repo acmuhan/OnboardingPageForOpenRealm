@@ -19,6 +19,7 @@
       blockKeyShortcuts: true,
       enforcementMode: "lock",
     },
+    verifyProvider: "auto",
     turnstile: {
       enabled: true,
       siteKey: "",
@@ -27,6 +28,13 @@
       theme: "light",
       size: "normal",
       tokenTTLSeconds: 110,
+    },
+    geetest: {
+      enabled: false,
+      captchaId: "",
+      apiUrl: "https://static.geetest.com/v4/gt4.js",
+      lang: "zh-cn",
+      product: "bind",
     },
   };
 
@@ -59,7 +67,13 @@
       tokenExpireTimerId: null,
     },
     turnstile: {
+      provider: "turnstile",
       widgetId: null,
+      apiPromise: null,
+      apiReady: false,
+    },
+    geetest: {
+      instance: null,
       apiPromise: null,
       apiReady: false,
     },
@@ -1375,6 +1389,7 @@
   function resolveSecurityConfig(input) {
     const source = typeof input === "object" && input !== null ? input : {};
     const sourceTurnstile = typeof source.turnstile === "object" && source.turnstile !== null ? source.turnstile : {};
+    const sourceGeetest = typeof source.geetest === "object" && source.geetest !== null ? source.geetest : {};
     const sourceAntiDebug = typeof source.antiDebug === "object" && source.antiDebug !== null ? source.antiDebug : {};
 
     return {
@@ -1390,6 +1405,7 @@
         blockKeyShortcuts: sourceAntiDebug.blockKeyShortcuts !== false,
         enforcementMode: sourceAntiDebug.enforcementMode === "warn" ? "warn" : "lock",
       },
+      verifyProvider: source.verifyProvider === "turnstile" || source.verifyProvider === "geetest" ? source.verifyProvider : "auto",
       turnstile: {
         enabled: sourceTurnstile.enabled !== false,
         siteKey: typeof sourceTurnstile.siteKey === "string" ? sourceTurnstile.siteKey.trim() : "",
@@ -1398,6 +1414,13 @@
         theme: sourceTurnstile.theme === "dark" ? "dark" : "light",
         size: sourceTurnstile.size === "compact" ? "compact" : "normal",
         tokenTTLSeconds: normalizeNumber(sourceTurnstile.tokenTTLSeconds, DEFAULT_SECURITY.turnstile.tokenTTLSeconds, 60, 600),
+      },
+      geetest: {
+        enabled: sourceGeetest.enabled !== false,
+        captchaId: typeof sourceGeetest.captchaId === "string" ? sourceGeetest.captchaId.trim() : "",
+        apiUrl: typeof sourceGeetest.apiUrl === "string" && sourceGeetest.apiUrl.trim() ? sourceGeetest.apiUrl.trim() : DEFAULT_SECURITY.geetest.apiUrl,
+        lang: typeof sourceGeetest.lang === "string" && sourceGeetest.lang.trim() ? sourceGeetest.lang.trim() : DEFAULT_SECURITY.geetest.lang,
+        product: sourceGeetest.product === "float" || sourceGeetest.product === "popup" ? sourceGeetest.product : DEFAULT_SECURITY.geetest.product,
       },
     };
   }
@@ -1408,7 +1431,9 @@
       useObfuscatedLinks: DEFAULT_SECURITY.useObfuscatedLinks,
       probeRateLimitMs: DEFAULT_SECURITY.probeRateLimitMs,
       antiDebug: Object.assign({}, DEFAULT_SECURITY.antiDebug),
+      verifyProvider: DEFAULT_SECURITY.verifyProvider,
       turnstile: Object.assign({}, DEFAULT_SECURITY.turnstile),
+      geetest: Object.assign({}, DEFAULT_SECURITY.geetest),
     };
   }
 
@@ -1500,6 +1525,11 @@
       .join("");
   }
 })();
+
+
+
+
+
 
 
 
