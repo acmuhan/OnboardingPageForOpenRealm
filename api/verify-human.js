@@ -128,6 +128,10 @@ async function verifyTurnstile(payload, ip) {
   }
 }
 
+function hmacSha256Hex(key, input) {
+  return crypto.createHmac("sha256", String(key || "")).update(String(input || "")).digest("hex");
+}
+
 function sha256Hex(input) {
   return crypto.createHash("sha256").update(String(input || "")).digest("hex");
 }
@@ -154,9 +158,7 @@ async function verifyGeetest(payload) {
     };
   }
 
-  const signToken = sha256Hex(lotNumber + captchaKey);
-
-  try {
+  const tryValidate = async function (signToken) {
     const resp = await fetch("https://gcaptcha4.geetest.com/validate", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -170,7 +172,15 @@ async function verifyGeetest(payload) {
       }),
     });
 
-    const data = await resp.json();
+    return resp.json();
+  };
+
+  try {
+    let data = await tryValidate(hmacSha256Hex(captchaKey, lotNumber));
+
+    if (data && data.result !== "success" && String(data.reason || "").toLowerCase().indexOf("sign_token") >= 0) {
+      data = await tryValidate(sha256Hex(lotNumber + captchaKey));
+    }
     if (!data || data.result !== "success") {
       return {
         ok: false,
@@ -234,3 +244,4 @@ module.exports = async function handler(req, res) {
     expiresInSeconds: 600,
   });
 };
+
