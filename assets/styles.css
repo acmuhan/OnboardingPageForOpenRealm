@@ -314,6 +314,32 @@ body.site-masked {
   justify-items: center;
 }
 
+.turnstile-loading {
+  min-height: 78px;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px dashed #cfdaf1;
+  background: linear-gradient(120deg, #f5f8ff, #eef4ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #425375;
+  font-size: 13px;
+}
+
+.turnstile-loading.hidden {
+  display: none;
+}
+
+.turnstile-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #c8d7fa;
+  border-top-color: #2452d4;
+  animation: verify-spin 0.8s linear infinite;
+}
 .verify-feedback {
   margin: 10px 0 0;
   font-size: 13px;
@@ -535,4 +561,16 @@ body.site-masked {
     transform: translateY(0);
   }
 }
+
+
+@keyframes verify-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 

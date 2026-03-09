@@ -117,7 +117,8 @@
 
         if (window.turnstile && state.turnstile.widgetId !== null) {
           window.turnstile.reset(state.turnstile.widgetId);
-          setVerifyFeedback("验证码已刷新，请重新勾选。", "warn");
+          setTurnstileLoading(false);
+          setVerifyFeedback("验证已刷新，请重新勾选。", "warn");
         } else {
           initializeVerificationFlow();
         }
@@ -254,26 +255,29 @@
         return;
       }
 
-      setVerifyFeedback("人机验证已关闭，已直接放行。", "ok");
+      setVerifyFeedback("验证未启用，已直接放行。", "ok");
       unlockNavigation();
       return;
     }
 
-    lockNavigation("请先完成人机验证，验证前不会显示导航。", true);
+    lockNavigation("请先完成安全验证，验证通过后显示导航。", true);
     showVerifyModal();
 
     if (!state.security.turnstile.siteKey || state.security.turnstile.siteKey === "YOUR_TURNSTILE_SITE_KEY") {
-      setVerifyFeedback("请在 cfg/app.json 配置有效的 Turnstile Site Key。", "error");
+      setTurnstileLoading(false);
+      setVerifyFeedback("请在 cfg/app.json 配置有效的验证密钥。", "error");
       return;
     }
 
-    setVerifyFeedback("正在加载 Turnstile 组件...", "warn");
+    setTurnstileLoading(true, "验证组件加载中...");
+    setVerifyFeedback("正在加载验证组件...", "warn");
 
     try {
       await ensureTurnstileApiLoaded();
       renderTurnstileWidget();
     } catch (error) {
-      setVerifyFeedback(error.message || "Turnstile 加载失败，请稍后重试。", "error");
+      setTurnstileLoading(false);
+      setVerifyFeedback(error.message || "验证组件加载失败，请稍后重试。", "error");
       lockNavigation("验证服务不可用，导航继续保持隐藏。", true);
       showVerifyModal();
     }
@@ -299,14 +303,14 @@
       script.async = true;
       script.defer = true;
       script.onerror = function () {
-        reject(new Error("Turnstile 脚本加载失败，请检查网络或 apiUrl 配置。"));
+        reject(new Error("验证脚本加载失败，请检查网络或 apiUrl 配置。"));
       };
 
       document.head.appendChild(script);
 
       window.setTimeout(function () {
         if (!state.turnstile.apiReady) {
-          reject(new Error("Turnstile 加载超时，请稍后重试。"));
+          reject(new Error("验证组件加载超时，请稍后重试。"));
         }
       }, 15000);
     }).catch(function (error) {
@@ -322,9 +326,28 @@
     return baseUrl + connector + "onload=onTurnstileApiLoaded&render=explicit&hl=" + encodeURIComponent(hl || "zh-CN");
   }
 
+  function setTurnstileLoading(active, text) {
+    const loading = document.getElementById("turnstile-loading");
+    const loadingText = document.getElementById("turnstile-loading-text");
+
+    if (!loading) {
+      return;
+    }
+
+    if (typeof text === "string" && text.trim() && loadingText) {
+      loadingText.textContent = text.trim();
+    }
+
+    if (active) {
+      loading.classList.remove("hidden");
+    } else {
+      loading.classList.add("hidden");
+    }
+  }
   function renderTurnstileWidget() {
     if (!window.turnstile || typeof window.turnstile.render !== "function") {
-      setVerifyFeedback("Turnstile 未就绪，请稍后重试。", "error");
+      setTurnstileLoading(false);
+      setVerifyFeedback("验证组件未就绪，请稍后重试。", "error");
       return;
     }
 
@@ -342,10 +365,12 @@
         "expired-callback": handleTurnstileExpired,
         "error-callback": handleTurnstileError,
       });
-      setVerifyFeedback("请完成勾选验证。", "warn");
+      setTurnstileLoading(false);
+      setVerifyFeedback("请完成安全验证。", "warn");
     } catch (error) {
       const detail = error && error.message ? `（${error.message}）` : "";
-      setVerifyFeedback(`Turnstile 渲染失败，请检查 Site Key 或主机名绑定${detail}`, "error");
+      setTurnstileLoading(false);
+      setVerifyFeedback(`验证组件渲染失败，请检查 Site Key 与主机名绑定${detail}`, "error");
     }
   }
 
@@ -355,11 +380,13 @@
     }
 
     if (!token) {
-      setVerifyFeedback("No verification token received. Please try again.", "error");
+      setTurnstileLoading(false);
+      setVerifyFeedback("未获取到验证令牌，请重试。", "error");
       return;
     }
 
-    setVerifyFeedback("Verifying Turnstile result...", "warn");
+    setTurnstileLoading(true, "验证结果校验中...");
+    setVerifyFeedback("正在校验，请稍候...", "warn");
 
     try {
       const sessionToken = await verifyTurnstileToken(token);
@@ -369,7 +396,8 @@
 
       await ensureProtectedContentLoaded();
 
-      setVerifyFeedback("Verification passed. Unlocking links...", "ok");
+      setTurnstileLoading(false);
+      setVerifyFeedback("验证通过，正在加载内容...", "ok");
       hideVerifyModal();
       unlockNavigation();
       scheduleTurnstileExpiry();
@@ -380,9 +408,10 @@
       if (window.turnstile && state.turnstile.widgetId !== null) {
         window.turnstile.reset(state.turnstile.widgetId);
       }
-      setVerifyFeedback((error.message || "Turnstile verification failed") + ". Captcha has been refreshed.", "error");
+      setTurnstileLoading(false);
+      setVerifyFeedback((error.message || "验证失败") + "，验证已刷新。", "error");
       showVerifyModal();
-      lockNavigation("Verification failed. Links remain hidden.", true);
+      lockNavigation("验证失败，导航继续隐藏。", true);
     }
   }
 
@@ -465,11 +494,11 @@
         }
 
         if (!resp.ok) {
-          throw new Error((data && data.message) || "Verification service unavailable");
+          throw new Error((data && data.message) || "验证服务不可用");
         }
 
         if (!data || data.ok !== true || !data.sessionToken) {
-          throw new Error((data && data.message) || "Turnstile server validation failed");
+          throw new Error((data && data.message) || "验证结果校验失败");
         }
 
         return data.sessionToken;
@@ -485,7 +514,7 @@
       }
     }
 
-    throw lastError || new Error("Turnstile verification failed");
+    throw lastError || new Error("验证失败");
   }
 
   function handleTurnstileExpired() {
@@ -498,7 +527,8 @@
     state.verification.sessionToken = "";
     lockNavigation("验证已过期，请重新进行人机验证。", true);
     showVerifyModal();
-    setVerifyFeedback("验证已过期，请重新勾选。", "warn");
+    setTurnstileLoading(false);
+    setVerifyFeedback("验证已过期，请重新完成验证。", "warn");
   }
 
   function handleTurnstileError(errorCode) {
@@ -630,7 +660,7 @@
     if (typeof item.urlEncoded === "string" && item.urlEncoded.trim()) {
       const raw = item.urlEncoded.trim();
 
-      // Compatibility: allow plain URL accidentally put into urlEncoded.
+      
       if (/^(https?:|mailto:|tel:|magnet:)/i.test(raw)) {
         return raw;
       }
@@ -894,7 +924,7 @@
       return { status: "unknown", message: "协议不支持检测" };
     }
 
-    // Probe via same-origin API to avoid browser-side CORS/CORP differences.
+    
     const apiPath = "/api/probe?url=" + encodeURIComponent(parsed.href);
 
     try {
@@ -1282,6 +1312,10 @@
       .join("");
   }
 })();
+
+
+
+
 
 
 
