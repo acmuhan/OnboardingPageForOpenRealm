@@ -113,17 +113,18 @@ module.exports = async function handler(req, res) {
     const geetest = anti && anti.geetest ? anti.geetest : {};
     const geetestReady = geetest.enabled !== false && typeof geetest.captchaId === "string" && geetest.captchaId.trim().length > 0;
     const allowIp9Fallback = anti.allowIp9Fallback !== false;
+    const preferIp9First = anti.preferIp9First !== false;
 
-    let country = String(getHeader(req, "cf-ipcountry") || "").toUpperCase();
-    let source = "cf-ipcountry";
+    let country = "";
+    let source = "unknown";
+    const cfCountry = String(getHeader(req, "cf-ipcountry") || "").toUpperCase();
 
-    if ((!country || country === "XX") && allowIp9Fallback) {
-      source = "ip9";
+    if (allowIp9Fallback && preferIp9First) {
       const ip = normalizeIp(getClientIp(req));
-
       if (!isPrivateIp(ip)) {
         try {
           country = await fetchCountryByIp9(ip);
+          source = country ? "ip9" : "unknown";
         } catch {
           country = "";
           source = "unknown";
@@ -131,8 +132,35 @@ module.exports = async function handler(req, res) {
       } else {
         source = "private-ip";
       }
-    } else if (!country || country === "XX") {
-      source = "no-fallback";
+
+      if ((!country || country === "XX") && cfCountry && cfCountry !== "XX") {
+        country = cfCountry;
+        source = "cf-ipcountry";
+      }
+    } else {
+      country = cfCountry;
+      source = "cf-ipcountry";
+
+      if ((!country || country === "XX") && allowIp9Fallback) {
+        source = "ip9";
+        const ip = normalizeIp(getClientIp(req));
+
+        if (!isPrivateIp(ip)) {
+          try {
+            country = await fetchCountryByIp9(ip);
+            if (!country) {
+              source = "unknown";
+            }
+          } catch {
+            country = "";
+            source = "unknown";
+          }
+        } else {
+          source = "private-ip";
+        }
+      } else if (!country || country === "XX") {
+        source = "no-fallback";
+      }
     }
 
     const provider = pickProviderByStrategy(strategy, country, geetestReady);
@@ -144,6 +172,7 @@ module.exports = async function handler(req, res) {
       country: country || "UNKNOWN",
       source,
       allowIp9Fallback,
+      preferIp9First,
     });
   } catch {
     res.status(200).json({
@@ -155,4 +184,5 @@ module.exports = async function handler(req, res) {
     });
   }
 };
+
 

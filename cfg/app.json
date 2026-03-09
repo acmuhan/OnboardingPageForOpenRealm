@@ -14,6 +14,7 @@
     "probeRateLimitMs": 1200,
     "verifyProvider": "auto",
     "allowIp9Fallback": true,
+    "preferIp9First": true,
     "antiDebug": {
       "enabled": true,
       "lockOnDetect": true,
