@@ -1,34 +1,42 @@
-{
-    "siteTitle":  "OpenCloud",
-    "siteSubtitle":  "From OpenRealm",
-    "noticeSource":  "data/notices.json",
-    "linkSource":  "data/links.json",
-    "pollingSeconds":  60,
-    "customLabels":  {
-                         "noticeTitle":  "公告",
-                         "navTitle":  "导航"
-                     },
-    "antiCrawler":  {
-                        "requireHumanCheck":  true,
-                        "useObfuscatedLinks":  true,
-                        "probeRateLimitMs":  1200,
-                        "antiDebug":  {
-                                          "enabled":  true,
-                                          "lockOnDetect":  true,
-                                          "detectIntervalMs":  1200,
-                                          "devtoolsThreshold":  160,
-                                          "blockContextMenu":  true,
-                                          "blockKeyShortcuts":  true,
-                                          "enforcementMode":  "warn"
-                                      },
-                        "turnstile":  {
-                                          "size":  "normal",
-                                          "theme":  "light",
-                                          "siteKey":  "0x4AAAAAACoBi3aCrrM6KQ_c",
-                                          "apiUrl":  "https://challenges.cloudflare.com/turnstile/v0/api.js",
-                                          "tokenTTLSeconds":  110,
-                                          "hl":  "zh-CN",
-                                          "enabled":  true
-                                      }
-                    }
+﻿{
+  "siteTitle": "OpenCloud",
+  "siteSubtitle": "From OpenRealm",
+  "noticeSource": "data/notices.json",
+  "linkSource": "data/links.json",
+  "pollingSeconds": 60,
+  "customLabels": {
+    "noticeTitle": "公告",
+    "navTitle": "导航"
+  },
+  "antiCrawler": {
+    "requireHumanCheck": true,
+    "useObfuscatedLinks": true,
+    "probeRateLimitMs": 1200,
+    "verifyProvider": "auto",
+    "antiDebug": {
+      "enabled": true,
+      "lockOnDetect": true,
+      "detectIntervalMs": 1200,
+      "devtoolsThreshold": 160,
+      "blockContextMenu": true,
+      "blockKeyShortcuts": true,
+      "enforcementMode": "warn"
+    },
+    "turnstile": {
+      "size": "normal",
+      "theme": "light",
+      "siteKey": "0x4AAAAAACoBi3aCrrM6KQ_c",
+      "apiUrl": "https://challenges.cloudflare.com/turnstile/v0/api.js",
+      "tokenTTLSeconds": 110,
+      "hl": "zh-CN",
+      "enabled": true
+    },
+    "geetest": {
+      "enabled": true,
+      "captchaId": "",
+      "apiUrl": "https://static.geetest.com/v4/gt4.js",
+      "lang": "zh-cn",
+      "product": "bind"
+    }
+  }
 }

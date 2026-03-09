@@ -240,7 +240,7 @@
       return;
     }
 
-    if (!state.security.requireHumanCheck || !state.security.turnstile.enabled) {
+    if (!state.security.requireHumanCheck) {
       hideVerifyModal();
       clearTurnstileExpiry();
       state.verification.verified = true;
@@ -263,16 +263,23 @@
     lockNavigation("请先完成安全验证，验证通过后显示导航。", true);
     showVerifyModal();
 
-    if (!state.security.turnstile.siteKey || state.security.turnstile.siteKey === "YOUR_TURNSTILE_SITE_KEY") {
-      setTurnstileLoading(false);
-      setVerifyFeedback("请在 cfg/app.json 配置有效的验证密钥。", "error");
-      return;
-    }
-
     setTurnstileLoading(true, "验证组件加载中...");
     setVerifyFeedback("正在加载验证组件...", "warn");
 
     try {
+      const decision = await getCaptchaDecision();
+      state.turnstile.provider = decision.provider;
+
+      if (state.turnstile.provider === "geetest") {
+        await ensureGeetestApiLoaded();
+        renderGeetestWidget();
+        return;
+      }
+
+      if (!state.security.turnstile.siteKey || state.security.turnstile.siteKey === "YOUR_TURNSTILE_SITE_KEY") {
+        throw new Error("请在 cfg/app.json 配置有效的 Turnstile Site Key");
+      }
+
       await ensureTurnstileApiLoaded();
       renderTurnstileWidget();
     } catch (error) {
@@ -280,6 +287,26 @@
       setVerifyFeedback(error.message || "验证组件加载失败，请稍后重试。", "error");
       lockNavigation("验证服务不可用，导航继续保持隐藏。", true);
       showVerifyModal();
+    }
+  }
+
+  async function getCaptchaDecision() {
+    try {
+      const resp = await fetch("/api/captcha-decision", {
+        method: "GET",
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+
+      if (!resp.ok) {
+        return { provider: "turnstile" };
+      }
+
+      const data = await resp.json();
+      const provider = data && data.provider === "geetest" ? "geetest" : "turnstile";
+      return { provider };
+    } catch {
+      return { provider: "turnstile" };
     }
   }
 
@@ -303,14 +330,14 @@
       script.async = true;
       script.defer = true;
       script.onerror = function () {
-        reject(new Error("验证脚本加载失败，请检查网络或 apiUrl 配置。"));
+        reject(new Error("Turnstile 脚本加载失败，请检查网络或 apiUrl 配置。"));
       };
 
       document.head.appendChild(script);
 
       window.setTimeout(function () {
         if (!state.turnstile.apiReady) {
-          reject(new Error("验证组件加载超时，请稍后重试。"));
+          reject(new Error("Turnstile 加载超时，请稍后重试。"));
         }
       }, 15000);
     }).catch(function (error) {
@@ -319,6 +346,42 @@
     });
 
     return state.turnstile.apiPromise;
+  }
+
+  function ensureGeetestApiLoaded() {
+    if (state.geetest.apiReady && window.initGeetest4) {
+      return Promise.resolve();
+    }
+
+    if (state.geetest.apiPromise) {
+      return state.geetest.apiPromise;
+    }
+
+    state.geetest.apiPromise = new Promise(function (resolve, reject) {
+      const script = document.createElement("script");
+      script.src = state.security.geetest.apiUrl;
+      script.async = true;
+      script.defer = true;
+      script.onload = function () {
+        state.geetest.apiReady = true;
+        resolve();
+      };
+      script.onerror = function () {
+        reject(new Error("极验脚本加载失败，请检查网络或 apiUrl 配置。"));
+      };
+      document.head.appendChild(script);
+
+      window.setTimeout(function () {
+        if (!state.geetest.apiReady) {
+          reject(new Error("极验加载超时，请稍后重试。"));
+        }
+      }, 15000);
+    }).catch(function (error) {
+      state.geetest.apiPromise = null;
+      throw error;
+    });
+
+    return state.geetest.apiPromise;
   }
 
   function buildTurnstileApiUrl(baseUrl, hl) {
@@ -344,6 +407,7 @@
       loading.classList.add("hidden");
     }
   }
+
   function renderTurnstileWidget() {
     if (!window.turnstile || typeof window.turnstile.render !== "function") {
       setTurnstileLoading(false);
@@ -353,6 +417,7 @@
 
     if (state.turnstile.widgetId !== null) {
       window.turnstile.reset(state.turnstile.widgetId);
+      setTurnstileLoading(false);
       return;
     }
 
@@ -374,6 +439,47 @@
     }
   }
 
+  function renderGeetestWidget() {
+    const captchaId = String(state.security.geetest.captchaId || "").trim();
+    if (!captchaId) {
+      setTurnstileLoading(false);
+      setVerifyFeedback("极验 captchaId 未配置，已回退 Turnstile。", "error");
+      state.turnstile.provider = "turnstile";
+      initializeVerificationFlow();
+      return;
+    }
+
+    if (!window.initGeetest4 || typeof window.initGeetest4 !== "function") {
+      setTurnstileLoading(false);
+      setVerifyFeedback("极验初始化函数不可用。", "error");
+      return;
+    }
+
+    window.initGeetest4(
+      {
+        captchaId,
+        product: state.security.geetest.product,
+        language: state.security.geetest.lang,
+      },
+      function (captchaObj) {
+        state.geetest.instance = captchaObj;
+
+        captchaObj.appendTo("#turnstile-container");
+        captchaObj.onReady(function () {
+          setTurnstileLoading(false);
+          setVerifyFeedback("请完成极验验证。", "warn");
+        });
+        captchaObj.onSuccess(function () {
+          handleGeetestSuccess(captchaObj);
+        });
+        captchaObj.onError(function () {
+          setTurnstileLoading(false);
+          setVerifyFeedback("极验组件异常，请点击“重新加载验证”。", "error");
+        });
+      }
+    );
+  }
+
   async function handleTurnstileSuccess(token) {
     if (state.debugGuard.active) {
       return;
@@ -389,7 +495,7 @@
     setVerifyFeedback("正在校验，请稍候...", "warn");
 
     try {
-      const sessionToken = await verifyTurnstileToken(token);
+      const sessionToken = await verifyHumanSession({ provider: "turnstile", token });
       state.verification.verified = true;
       state.verification.token = token;
       state.verification.sessionToken = sessionToken;
@@ -405,8 +511,61 @@
       state.verification.verified = false;
       state.verification.token = "";
       state.verification.sessionToken = "";
-      if (window.turnstile && state.turnstile.widgetId !== null) {
+      if (state.turnstile.provider === "geetest" && state.geetest.instance && typeof state.geetest.instance.reset === "function") {
+        state.geetest.instance.reset();
+      } else if (window.turnstile && state.turnstile.widgetId !== null) {
         window.turnstile.reset(state.turnstile.widgetId);
+      }
+      setTurnstileLoading(false);
+      setVerifyFeedback((error.message || "验证失败") + "，验证已刷新。", "error");
+      showVerifyModal();
+      lockNavigation("验证失败，导航继续隐藏。", true);
+    }
+  }
+
+  async function handleGeetestSuccess(captchaObj) {
+    if (state.debugGuard.active) {
+      return;
+    }
+
+    const validate = captchaObj && typeof captchaObj.getValidate === "function"
+      ? captchaObj.getValidate()
+      : null;
+
+    if (!validate) {
+      setVerifyFeedback("未获取到极验参数，请重试。", "error");
+      return;
+    }
+
+    setTurnstileLoading(true, "验证结果校验中...");
+    setVerifyFeedback("正在校验，请稍候...", "warn");
+
+    try {
+      const sessionToken = await verifyHumanSession({
+        provider: "geetest",
+        lot_number: validate.lot_number,
+        captcha_output: validate.captcha_output,
+        pass_token: validate.pass_token,
+        gen_time: validate.gen_time,
+      });
+
+      state.verification.verified = true;
+      state.verification.token = "GEETEST";
+      state.verification.sessionToken = sessionToken;
+
+      await ensureProtectedContentLoaded();
+
+      setTurnstileLoading(false);
+      setVerifyFeedback("验证通过，正在加载内容...", "ok");
+      hideVerifyModal();
+      unlockNavigation();
+      scheduleTurnstileExpiry();
+    } catch (error) {
+      state.verification.verified = false;
+      state.verification.token = "";
+      state.verification.sessionToken = "";
+      if (state.geetest.instance && typeof state.geetest.instance.reset === "function") {
+        state.geetest.instance.reset();
       }
       setTurnstileLoading(false);
       setVerifyFeedback((error.message || "验证失败") + "，验证已刷新。", "error");
@@ -471,7 +630,7 @@
     });
   }
 
-  async function verifyTurnstileToken(token) {
+  async function verifyHumanSession(payload) {
     let lastError = null;
 
     for (let attempt = 1; attempt <= 2; attempt += 1) {
@@ -481,7 +640,7 @@
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ token }),
+          body: JSON.stringify(payload || {}),
           cache: "no-store",
           credentials: "same-origin",
         });
@@ -505,7 +664,7 @@
       } catch (error) {
         lastError = error;
         const msg = String((error && error.message) || "").toLowerCase();
-        const mayRetry = attempt < 2 && (msg.indexOf("service") >= 0 || msg.indexOf("timeout") >= 0 || msg.indexOf("network") >= 0);
+        const mayRetry = attempt < 2 && (msg.indexOf("service") >= 0 || msg.indexOf("timeout") >= 0 || msg.indexOf("network") >= 0 || msg.indexOf("服务") >= 0);
         if (mayRetry) {
           await sleep(600);
           continue;
@@ -1312,6 +1471,14 @@
       .join("");
   }
 })();
+
+
+
+
+
+
+
+
 
 
 
